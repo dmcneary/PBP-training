@@ -4,7 +4,7 @@ module.exports =  {
  findAll: function(req, res) {
    activity
      .find({ })
-     .sort({ date: -1 })
+     .sort({ actDate: -1 })
      .then(dbModel => res.json(dbModel))
      .catch(err => res.status(422).json(err));
  },
@@ -12,7 +12,7 @@ module.exports =  {
    console.log(req.user.username)
   activity
     .find({ userId: req.user.username })
-    .sort({ date: -1 })
+    .sort({ actDate: -1 })
     .then(dbModel => res.json(dbModel))
     .catch(err => res.status(422).json(err));
 },
