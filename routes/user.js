@@ -6,8 +6,10 @@ const passport = require('../passport')
 router.post('/', (req, res) => {
     console.log('user signup');
 
-    const { username, password } = req.body
-    // ADD VALIDATION
+    const { username, password, firstName, lastName, gender, age, location } = req.body
+    if (!username || !password || !firstName || !lastName || !gender || age === undefined || age === null || !location) {
+        return res.status(400).json({ error: 'Missing required fields' })
+    }
     User.findOne({ username: username }, (err, user) => {
         if (err) {
             console.log('User.js post error: ', err)
@@ -19,10 +21,14 @@ router.post('/', (req, res) => {
         else {
             const newUser = new User({
                 username: username,
-                password: password
-               
+                password: password,
+                firstName: firstName,
+                lastName: lastName,
+                gender: gender,
+                age: age,
+                location: location
             })
-            User.create(req.body, (err, savedUser) => {
+            User.create(newUser, (err, savedUser) => {
                 if (err) return res.json(err)
                 res.json(savedUser)
             })
