@@ -24,8 +24,15 @@ module.exports =  {
  },
  create: function(req, res) {
    console.log(req.body);
+   if (!req.user) {
+     return res.status(401).json({ error: 'Unauthorized' });
+   }
+   const activityData = {
+     ...req.body,
+     userId: req.user.username
+   };
    activity
-     .create(req.body)
+     .create(activityData)
      .then(dbModel => res.json(dbModel))
      .catch(err => res.status(422).json(err));
  },
