@@ -1,35 +1,23 @@
 {
   "name": "fit-monkeys",
   "version": "0.1.0",
-  "homepage": "https://obscure-wave-97311.herokuapp.com/",
   "private": true,
   "dependencies": {
-    "express-session": "^1.16.1",
-    "react": "^16.8.6",
-    "react-bootstrap": "^1.0.0-beta.8",
-    "react-dom": "^16.8.6",
-    "react-scripts": "^3.4.1"
+    "axios": "^1.6.8",
+    "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12",
+    "react": "^18.2.0",
+    "react-bootstrap": "^1.6.8",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3"
   },
-  "proxy": "http://localhost:3001",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
   }
 }
