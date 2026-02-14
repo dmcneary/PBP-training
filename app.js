@@ -36,6 +36,10 @@ if (process.env.NODE_ENV === 'production') {
 // Routes
 app.use(routes)
 	
-app.listen(PORT, function () {
-  console.log(`🌎 ==> API server now on port ${PORT}!`);
-});
+if (require.main === module) {
+  app.listen(PORT, function () {
+    console.log(`🌎 ==> API server now on port ${PORT}!`);
+  });
+}
+
+module.exports = app;
