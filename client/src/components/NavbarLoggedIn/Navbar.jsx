@@ -46,7 +46,7 @@ const Navbar = ({ getUser }) => {
             </a>
           </li>
           <li className="nav-item">
-            <a className="nav-link" href="/Challenges">
+            <a className="nav-link" href="/challenges">
               Challenges
             </a>
           </li>

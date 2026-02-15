@@ -1,40 +1,34 @@
-import React, { Component } from "react";
-import Alert from "../../components/Alert"
-import ChallengeForm from "../../components/ChallengeForm"
-import { Input } from "../../components/Form";
-import { Col, Row, Container } from "../../components/Grid";
-import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import ChallengeForm from "../../components/ChallengeForm";
+import { Container } from "../../components/Grid";
 import "./ChallengeSignUp.css";
 import { Jumbotron } from "react-bootstrap";
 
+const ChallengeSignup = () => {
+    const location = useLocation();
+    const challenge = location.state || {};
+    const challengeName = challenge.name || "Challenge";
+    const challengeImg = challenge.img;
 
-class ChallengeSignup extends Component {
-    constructor(props) {
-        super(props);
-    }
-
-    render() {
-        console.log("props", this.props.location);
-        return (
-            <Container fluid>
-                <Jumbotron fluid className="JumboSign">
-                    <Container>
-                        <br /><br /><br />
-                        <h1 className="text-center">Challenge Sign Up</h1>
-                        <h2 className="chalName"> {this.props.location.name}</h2>
-                        <img className="srcPic" src={this.props.location.img} />
-                    </Container>
-                </Jumbotron>
-                <Jumbotron className="jumboSignBody">
-                    <div className="FormText">
-                        <ChallengeForm className="cForm" />
-                    </div>
-                </Jumbotron>
-                <Row>
-                </Row>
-            </Container>
-        );
-    }
-}
+    return (
+        <Container fluid>
+            <Jumbotron fluid className="JumboSign">
+                <Container>
+                    <br /><br /><br />
+                    <h1 className="text-center">Challenge Sign Up</h1>
+                    <h2 className="chalName"> {challengeName}</h2>
+                    {challengeImg ? (
+                        <img className="srcPic" src={challengeImg} alt={challengeName} />
+                    ) : null}
+                </Container>
+            </Jumbotron>
+            <Jumbotron className="jumboSignBody">
+                <div className="FormText">
+                    <ChallengeForm className="cForm" />
+                </div>
+            </Jumbotron>
+        </Container>
+    );
+};
 
 export default ChallengeSignup;

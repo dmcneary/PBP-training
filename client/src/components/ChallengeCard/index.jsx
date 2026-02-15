@@ -41,7 +41,10 @@ function ChallengeCard(props) {
                                         <strong>{placement} </strong> {props.description}
                                     </Tooltip>
                                 }>
-                                <Link to={{pathname: "/ChallengeSignUp", name: props.name, img: props.image}}>
+                                <Link
+                                    to="/ChallengeSignUp"
+                                    state={{ name: props.name, img: props.image }}
+                                >
                                     <Button variant="secondary" className="joinBtn">Join Now</Button>
                                 </Link>
                             </OverlayTrigger>
