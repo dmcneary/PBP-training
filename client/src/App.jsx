@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import Landing from "./pages/Landing/";
 import Dashboard from "./pages/Dashboard/";
-import Challenges from "./pages/Challenges/";
+import BrmChecklist from "./pages/Challenges/";
 import Login from "./pages/Login/";
 import Signup from "./pages/Signup/";
 import Header from "./components/Header";
@@ -64,7 +64,11 @@ const App = () => {
               path="/newactivity"
               element={<NewActivity loggedIn={loggedIn} username={username} />}
             />
-            <Route path="/challenges" element={<Challenges />} />
+            <Route path="/brm-checklist" element={<BrmChecklist />} />
+            <Route
+              path="/challenges"
+              element={<Navigate to="/brm-checklist" replace />}
+            />
             <Route path="/signup" element={<Signup />} />
             <Route
               path="/"

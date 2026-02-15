@@ -1,44 +1,39 @@
-import { useState } from "react";
-import ChallengeCard from "../../components/ChallengeCard";
-import cardData from "../../utils/card.json";
+import BrmCard from "../../components/BrmCard";
+import brmData from "../../utils/brm.json";
 
-const Challenge = () => {
-  const [cards, setCards] = useState(cardData);
-
-  const removeCard = (id) => {
-    const nextCards = cards.filter((card) => card.id !== id);
-    setCards(nextCards);
+const BrmChecklist = () => {
+  const statusById = {
+    "brm-200": "planned",
+    "brm-300": "missing",
+    "brm-400": "missing",
+    "brm-600": "missing"
   };
+
+  const completedCount = 0;
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="tag">Challenges</p>
+          <p className="tag">BRM checklist</p>
           <h1 className="mt-3 text-3xl font-semibold text-white">
-            Fit Monkey Challenges
+            PBP Qualification Plan
           </h1>
           <p className="mt-2 text-slate-300">
-            Choose a route, rally your crew, and collect progress insights as you go.
+            Plan, log, and track the four brevets required to start PBP 2027.
           </p>
         </div>
         <div className="glass rounded-2xl px-4 py-2 text-sm text-slate-300">
-          {cards.length} live challenges
+          {completedCount}/{brmData.length} completed
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {cards.map((card) => (
-          <ChallengeCard
-            removeCard={removeCard}
-            id={card.id}
-            key={card.id}
-            name={card.name}
-            distance={card.distance}
-            image={card.image}
-            bananas={card.bananas}
-            location={card.location}
-            description={card.description}
+        {brmData.map((brevet) => (
+          <BrmCard
+            key={brevet.id}
+            {...brevet}
+            status={statusById[brevet.id]}
           />
         ))}
       </div>
@@ -46,4 +41,4 @@ const Challenge = () => {
   );
 };
 
-export default Challenge;
+export default BrmChecklist;

@@ -30,8 +30,8 @@ const Navbar = ({ getUser }) => {
           <Link to="/dashboard" className="btn-ghost">
             Dashboard
           </Link>
-          <Link to="/challenges" className="btn-ghost">
-            Challenges
+          <Link to="/brm-checklist" className="btn-ghost">
+            BRM checklist
           </Link>
           <Link to="/newactivity" className="btn-ghost">
             New activity
