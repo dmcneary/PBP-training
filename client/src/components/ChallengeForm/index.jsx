@@ -1,42 +1,45 @@
-import React from "react";
-import "./ChallengeForm.css";
-import img from '../../Images/banana3.png'
-import { Form, Jumbotron, Container, Button } from "react-bootstrap";
-
-function ChallengeForm(props) {
-    // console.log("props", props.location.name);
-
-    return (
- 
-            <div className="Form ChalForm">
-                <Form>
-                    <Form.Group controlId="exampleForm.ControlInput1">
-                        <Form.Label>Username</Form.Label>
-                        <Form.Control type="user" placeholder="" />
-                    </Form.Group>
-                    <Form.Group controlId="exampleForm.ControlSelect1">
-                        <Form.Label>Age</Form.Label>
-                        <Form.Control type="age" placeholder="" />
-                    </Form.Group>
-                    <Form.Group controlId="exampleForm.ControlSelect2">
-                        <Form.Label>Level</Form.Label>
-                        <Form.Control as="select">
-                            <option>Beginner</option>
-                            <option>Intermediate</option>
-                            <option>Advanced</option>
-                        </Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="exampleForm.ControlTextarea1">
-                        <Form.Label>Message</Form.Label>
-                        <Form.Control as="textarea" rows="3" />
-                    </Form.Group>
-                    <Button className="formSignBtn" variant="primary" type="submit">
-                        Submit
-                    </Button>
-                </Form>
-            </div>
-      
-    );
-}
+const ChallengeForm = () => {
+  return (
+    <form className="glass space-y-4 rounded-3xl border border-white/10 p-6">
+      <div>
+        <label className="text-sm text-slate-300">Username</label>
+        <input
+          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none"
+          type="text"
+          placeholder="Your handle"
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="text-sm text-slate-300">Age</label>
+          <input
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none"
+            type="number"
+            placeholder="28"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-300">Level</label>
+          <select className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white focus:border-emerald-300 focus:outline-none">
+            <option>Beginner</option>
+            <option>Intermediate</option>
+            <option>Advanced</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="text-sm text-slate-300">Message</label>
+        <textarea
+          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none"
+          rows="4"
+          placeholder="Tell the host what you’re training for."
+        />
+      </div>
+      <button type="submit" className="btn-primary w-full justify-center">
+        Submit
+      </button>
+    </form>
+  );
+};
 
 export default ChallengeForm;

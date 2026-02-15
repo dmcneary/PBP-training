@@ -1,14 +1,7 @@
-import React from "react";
-import "./Jumbotron.css";
-
 const Jumbotron = ({ children }) => (
-  <div
-    style={{ height: 300, clear: "both", paddingTop: 50, paddingBottom: 50, textAlign: "center", background: "transparent" }}
-    className="jumbotron jumbo"
-  >
+  <div className="glass rounded-3xl p-6 text-center">
     {children}
   </div>
 );
 
 export default Jumbotron;
-

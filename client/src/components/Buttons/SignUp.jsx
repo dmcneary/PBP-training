@@ -1,9 +1,6 @@
-import React from "react";
-
-const SignUp = props => (
-  <button {...props} style={{ float: "right", marginBottom: 10 }} className="btn btn-success">
-    Sign Up
-    {props.children}
+const SignUp = (props) => (
+  <button {...props} className="btn-primary">
+    {props.children || "Sign Up"}
   </button>
 );
 

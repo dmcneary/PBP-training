@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "react-router-dom";
-import "../Header/Header.css";
 import axios from "axios";
 
 const Navbar = ({ getUser }) => {
@@ -22,63 +21,30 @@ const Navbar = ({ getUser }) => {
   };
 
   return (
-    <nav className="header navbar navbar-expand-lg navbar-light">
-      <a className="navbar-brand" href="/dashboard">
-        FitMonkeys
-      </a>
-      <button
-        className="navbar-toggler"
-        type="button"
-        data-toggle="collapse"
-        data-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span className="navbar-toggler-icon"></span>
-      </button>
-
-      <div className="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul className="navbar-nav mr-auto">
-          <li className="nav-item active">
-            <a className="nav-link" href="/dashboard">
-              Dashboard
-            </a>
-          </li>
-          <li className="nav-item">
-            <a className="nav-link" href="/challenges">
-              Challenges
-            </a>
-          </li>
-          <li className="nav-item dropdown">
-            <a
-              className="nav-link dropdown-toggle"
-              href="#"
-              id="navbarDropdown"
-              role="button"
-              data-toggle="dropdown"
-              aria-haspopup="true"
-              aria-expanded="false"
-            >
-              Activities
-            </a>
-            <div className="dropdown-menu" aria-labelledby="navbarDropdown">
-              <a className="dropdown-item" href="/newactivity">
-                New Activity
-              </a>
-              <a className="dropdown-item" href="/all-activities">
-                View All Activities
-              </a>
-            </div>
-          </li>
-        </ul>
-        <div>
-          <Link to="#" className="btn btn-link text-secondary" onClick={logout}>
-            <span className="text-secondary">Logout</span>
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <Link to="/dashboard" className="text-lg font-semibold text-white">
+          Fit Monkeys
+        </Link>
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <Link to="/dashboard" className="btn-ghost">
+            Dashboard
           </Link>
-        </div>
+          <Link to="/challenges" className="btn-ghost">
+            Challenges
+          </Link>
+          <Link to="/newactivity" className="btn-ghost">
+            New activity
+          </Link>
+          <Link to="/all-activities" className="btn-ghost">
+            All activities
+          </Link>
+          <button type="button" className="btn-primary" onClick={logout}>
+            Log out
+          </button>
+        </nav>
       </div>
-    </nav>
+    </header>
   );
 };
 

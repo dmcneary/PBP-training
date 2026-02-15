@@ -1,8 +1,6 @@
-import React from "react";
-
-const LogIn = props => (
-  <button {...props} style={{ float: "right", marginBottom: 10 }} className="btn btn-success">
-    {props.children}
+const LogIn = (props) => (
+  <button {...props} className="btn-primary">
+    {props.children || "Log In"}
   </button>
 );
 

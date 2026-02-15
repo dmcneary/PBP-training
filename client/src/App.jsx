@@ -39,41 +39,43 @@ const App = () => {
 
   return (
     <Router>
-      {hasUser ? (
-        <Navbar getUser={getUser} loggedIn={loggedIn} />
-      ) : (
-        <Header />
-      )}
-      <div>
-        <Routes>
-          <Route
-            path="/login"
-            element={<Login getUser={getUser} loggedIn={loggedIn} />}
-          />
-          <Route
-            path="/dashboard"
-            element={<Dashboard loggedIn={loggedIn} username={username} />}
-          />
-          <Route path="/all-activities" element={<AllActivities />} />
-          <Route
-            path="/activities/:id"
-            element={<ActivityDetail loggedIn={loggedIn} username={username} />}
-          />
-          <Route
-            path="/newactivity"
-            element={<NewActivity loggedIn={loggedIn} username={username} />}
-          />
-          <Route path="/challenges" element={<Challenges />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/"
-            element={<Landing loggedIn={loggedIn} username={username} />}
-          />
-          <Route path="/ChallengeSignUp" element={<ChallengeSignUp />} />
-          <Route path="*" element={<NoMatch />} />
-        </Routes>
+      <div className="app-shell">
+        {hasUser ? (
+          <Navbar getUser={getUser} loggedIn={loggedIn} />
+        ) : (
+          <Header />
+        )}
+        <main className="px-6 pb-16 pt-6">
+          <Routes>
+            <Route
+              path="/login"
+              element={<Login getUser={getUser} loggedIn={loggedIn} />}
+            />
+            <Route
+              path="/dashboard"
+              element={<Dashboard loggedIn={loggedIn} username={username} />}
+            />
+            <Route path="/all-activities" element={<AllActivities />} />
+            <Route
+              path="/activities/:id"
+              element={<ActivityDetail loggedIn={loggedIn} username={username} />}
+            />
+            <Route
+              path="/newactivity"
+              element={<NewActivity loggedIn={loggedIn} username={username} />}
+            />
+            <Route path="/challenges" element={<Challenges />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/"
+              element={<Landing loggedIn={loggedIn} username={username} />}
+            />
+            <Route path="/ChallengeSignUp" element={<ChallengeSignUp />} />
+            <Route path="*" element={<NoMatch />} />
+          </Routes>
+        </main>
+        <Footer />
       </div>
-      <Footer />
     </Router>
   );
 };

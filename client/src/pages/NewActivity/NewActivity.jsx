@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Input, TextArea } from "../../components/Form";
-import { Row, Container } from "../../components/Grid";
-import "./NewActivity.css";
+import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import Leaflet from "leaflet";
 import "leaflet-routing-machine/dist/leaflet-routing-machine";
 
@@ -139,79 +139,88 @@ const NewActivity = ({ username }) => {
   };
 
   return (
-    <Container fluid>
-      <Row>
-        <div className="col-xs-12 col-md-6 mx-auto" id="map"></div>
-        <div className="col-xs-12 col-md-6 mx-auto">
-          <form>
-            <p className="newActP">Activity title: </p>
-            <Input
-              value={formState.actTitle}
-              onChange={handleInputChange}
-              name="actTitle"
-              placeholder="Name your activity"
-            />
-            <p className="newActP">Activity description: </p>
-            <TextArea
-              value={formState.actDesc}
-              onChange={handleInputChange}
-              name="actDesc"
-              placeholder="Describe this activity (how did it go? how were you feeling?)"
-            />
-            <p className="newActP">Date: </p>
-            <Input
-              type="date"
-              value={formState.actDate}
-              onChange={handleInputChange}
-              name="actDate"
-            />
-            <p className="newActP">Duration: </p>
+    <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="glass rounded-3xl p-4">
+        <div id="map" className="h-[420px] w-full rounded-2xl"></div>
+      </div>
+      <form onSubmit={handleSubmit} className="glass space-y-4 rounded-3xl p-6">
+        <div>
+          <label className="text-sm text-slate-300">Activity title</label>
+          <Input
+            value={formState.actTitle}
+            onChange={handleInputChange}
+            name="actTitle"
+            placeholder="Name your activity"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-300">Activity description</label>
+          <TextArea
+            value={formState.actDesc}
+            onChange={handleInputChange}
+            name="actDesc"
+            placeholder="Describe the effort, conditions, and how it felt."
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-300">Date</label>
+          <Input
+            type="date"
+            value={formState.actDate}
+            onChange={handleInputChange}
+            name="actDate"
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="text-sm text-slate-300">Duration (minutes)</label>
             <Input
               value={formState.durationMins}
               onChange={handleInputChange}
               name="durationMins"
-              size="2"
-            />{" "}
-            Minutes
+            />
+          </div>
+          <div>
+            <label className="text-sm text-slate-300">Duration (seconds)</label>
             <Input
               value={formState.durationSecs}
               onChange={handleInputChange}
               name="durationSecs"
-              size="2"
-            />{" "}
-            Seconds
-            <p className="newActP">Distance (in miles): </p>
+            />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="text-sm text-slate-300">Distance (miles)</label>
             <Input
               value={formState.distance}
               onChange={handleInputChange}
               name="distance"
               type="number"
-              size="6"
             />
-            <p className="newActP">Type of activity: </p>
-            <select name="sportType" onChange={handleInputChange}>
-              <option value="">--Please choose an option--</option>
+          </div>
+          <div>
+            <label className="text-sm text-slate-300">Sport type</label>
+            <select
+              name="sportType"
+              onChange={handleInputChange}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white focus:border-emerald-300 focus:outline-none"
+            >
+              <option value="">Select sport</option>
               <option value="hiking">Hiking</option>
               <option value="running">Running</option>
               <option value="cycling">Cycling</option>
               <option value="swimming">Swimming</option>
               <option value="rowing">Rowing</option>
             </select>
-            <div className="submitBtn">
-              <button
-                className="btn btnSub1"
-                font-color="white"
-                onClick={handleSubmit}
-                type="submit"
-              >
-                Create Activity
-              </button>
-            </div>
-            {formState.message ? <p>{formState.message}</p> : null}
-          </form>
+          </div>
         </div>
-      </Row>
-    </Container>
+        {formState.message ? <p className="text-sm text-amber-200">{formState.message}</p> : null}
+        <button className="btn-primary w-full justify-center" type="submit">
+          Create activity
+        </button>
+      </form>
+    </div>
   );
 };
 

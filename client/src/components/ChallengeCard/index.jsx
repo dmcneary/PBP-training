@@ -1,60 +1,43 @@
-import React from "react";
-import "./ChallengeCard.css";
-import img from '../../Images/banana3.png'
-import { Button, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 function ChallengeCard(props) {
-    return (
+  const bananas = Math.min(Number(props.bananas || 0), 6);
 
-        <div className="card cardCard">
-            <div className="img-container">
-                <img alt={props.name} src={props.image} />
-            </div>
-            <div className="content">
-                <ul>
-                    <li>
-                        <strong>Challenge:</strong> {props.name}
-                    </li>
-                    <li>
-                        <strong>Distance:</strong> {props.distance}
-                    </li>
-                    <li>
-                        <strong>Location:</strong> {props.location}
-                    </li>
-                    <li>
-                        <strong>Bananas:</strong>
-                        {/* {props.bananas} */}
-                        {(() => {
-                            return new Array(props.bananas).fill(
-                                <img alt={props.name} src={img} />
-                            )
-                        })()}
-                    </li>
-                    <li>
-                        {['left'].map(placement => (
-                            <OverlayTrigger
-                                key={placement}
-                                placement={placement}
-                                overlay={
-                                    <Tooltip id={`tooltip-${placement}`}>
-                                        <strong>{placement} </strong> {props.description}
-                                    </Tooltip>
-                                }>
-                                <Link
-                                    to="/ChallengeSignUp"
-                                    state={{ name: props.name, img: props.image }}
-                                >
-                                    <Button variant="secondary" className="joinBtn">Join Now</Button>
-                                </Link>
-                            </OverlayTrigger>
-                        ))}
-                    </li>
-                </ul>
-            </div>
-
+  return (
+    <div className="glass overflow-hidden rounded-3xl">
+      <img
+        alt={props.name}
+        src={props.image}
+        className="h-44 w-full object-cover"
+      />
+      <div className="p-5">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-white">{props.name}</h3>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+            {props.distance}
+          </span>
         </div>
-    );
+        <p className="mt-1 text-sm text-slate-400">{props.location}</p>
+        <p className="mt-3 text-sm text-slate-300">
+          {props.description}
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1 text-xs text-amber-200">
+            {Array.from({ length: bananas }).map((_, index) => (
+              <span key={`${props.id}-banana-${index}`}>🍌</span>
+            ))}
+          </div>
+          <Link
+            to="/ChallengeSignUp"
+            state={{ name: props.name, img: props.image }}
+            className="btn-primary"
+          >
+            Join now
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default ChallengeCard;

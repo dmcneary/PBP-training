@@ -1,24 +1,26 @@
-import React from "react";
-import { Link } from 'react-router-dom';
-import "./Header.css";
+import { Link } from "react-router-dom";
 
 const Header = () => {
-        return (
-            <nav className="header navbar sticky-top navbar-expand-lg">
-                <a className="navbar-brand" href="/">Fit Monkeys</a>
-                <div>
-                    <Link to="/" className="btn btn-link text-secondary">
-                        <span className="text-secondary">Home</span>
-                    </Link>
-                    <Link to="/login" className="btn btn-link text-secondary">
-                        <span className="text-secondary">Login</span>
-                    </Link>
-                    <Link to="/signup" className="btn btn-link">
-                        <span className="text-secondary">Sign up</span>
-                    </Link>
-                </div>
-            </nav>
-        )
-    }
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <Link to="/" className="text-lg font-semibold text-white">
+          Fit Monkeys
+        </Link>
+        <nav className="flex items-center gap-3">
+          <Link to="/" className="btn-ghost">
+            Home
+          </Link>
+          <Link to="/login" className="btn-ghost">
+            Login
+          </Link>
+          <Link to="/signup" className="btn-primary">
+            Sign up
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+};
 
 export default Header;

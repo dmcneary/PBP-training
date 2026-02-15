@@ -1,28 +1,21 @@
-import React from "react";
-import "./Footer.css";
-
 const Footer = () => (
-
-    <footer className="page-footer sticky font-small special-color-dark pt-4 foot">
-        <div className="container">
-            <div className="row">
-                <div className="col-md-3 mb-md-0 mb-3">
-                </div>
-            </div>
-            
-            <div className="container text-center">
-                <a href="https://github.com/dmcneary/final-project"><i className="fa fa-github"></i></a>
-                <i className="fa fa-facebook"></i>
-                <i className="fa fa-twitter"></i>
-                <i className="fa fa-linkedin"></i>
-                <i className="fa fa-google"></i>
-            </div>
-            <br></br><br></br>
-            <div className="footer-copyright text-center py-3">© 2019 Copyright:
-          <p>UCLA Bootcamp Final Project</p>
-            </div>
-        </div>
-    </footer>
+  <footer className="mt-20 border-t border-white/10 bg-slate-950/70">
+    <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-10 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p className="text-slate-300">Fit Monkeys</p>
+        <p>Bootcamp project, rebuilt for 2026.</p>
+      </div>
+      <div className="flex items-center gap-4">
+        <a
+          className="text-slate-300 hover:text-white"
+          href="https://github.com/dmcneary/final-project"
+        >
+          GitHub
+        </a>
+        <span className="text-slate-600">© 2026</span>
+      </div>
+    </div>
+  </footer>
 );
 
 export default Footer;

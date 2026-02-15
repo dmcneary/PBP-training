@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./Login.css";
-import { Jumbotron, Container, Row, Col } from "react-bootstrap";
 
 const LoginForm = ({ loggedIn, getUser }) => {
   const [username, setUsername] = useState("");
@@ -37,68 +35,61 @@ const LoginForm = ({ loggedIn, getUser }) => {
   }
 
   return (
-    <Jumbotron className="JumboLogin">
-      <div className="container">
-        <div className="container containerLog">
-          <Row>
-            <Container className="contLog">
-              <Col lg="auto">
-                <br />
-                <form className="form-horizontal">
-                  <div className="form-group">
-                    <div className="col-1 col-ml-auto">
-                      <label className="form-label" htmlFor="username">
-                        Username
-                      </label>
-                    </div>
-                    <div className="col-3 col-mr-auto">
-                      <input
-                        className="form-input"
-                        type="text"
-                        id="username"
-                        name="username"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <div className="col-1 col-ml-auto">
-                      <label className="form-label" htmlFor="password">
-                        Password:
-                      </label>
-                    </div>
-                    <div className="col-3 col-mr-auto">
-                      <input
-                        className="form-input"
-                        placeholder="password"
-                        type="password"
-                        name="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="container">
-                    <div className="form-group ">
-                      <button
-                        className="btn btn-primary btnLog"
-                        onClick={handleSubmit}
-                        type="submit"
-                      >
-                        Login
-                      </button>
-                    </div>
-                    {message ? <p>{message}</p> : null}
-                  </div>
-                </form>
-              </Col>
-            </Container>
-          </Row>
+    <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_0.9fr]">
+      <div className="space-y-6">
+        <span className="tag">Welcome back</span>
+        <h1 className="text-3xl font-semibold text-white md:text-4xl">
+          Pick up where you left off.
+        </h1>
+        <p className="text-slate-300">
+          Log in to view your performance snapshots, recent workouts, and progress
+          across training blocks.
+        </p>
+        <div className="glass rounded-3xl p-6 text-sm text-slate-300">
+          <p className="text-white">Need a fresh account?</p>
+          <p className="mt-2">
+            Get set up in seconds and start uploading workout files immediately.
+          </p>
+          <Link to="/signup" className="btn-ghost mt-4 inline-flex">
+            Create an account
+          </Link>
         </div>
       </div>
-    </Jumbotron>
+
+      <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 space-y-4">
+        <div>
+          <label className="text-sm text-slate-300" htmlFor="username">
+            Username
+          </label>
+          <input
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none"
+            type="text"
+            id="username"
+            name="username"
+            placeholder="your-handle"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-300" htmlFor="password">
+            Password
+          </label>
+          <input
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none"
+            placeholder="••••••••"
+            type="password"
+            name="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </div>
+        {message ? <p className="text-sm text-amber-200">{message}</p> : null}
+        <button className="btn-primary w-full justify-center" type="submit">
+          Login
+        </button>
+      </form>
+    </div>
   );
 };
 
