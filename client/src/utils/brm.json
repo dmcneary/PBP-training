@@ -1,0 +1,38 @@
+[
+  {
+    "id": "brm-200",
+    "distanceKm": 200,
+    "distanceMiles": 125,
+    "timeLimit": "13h 30m",
+    "focus": "Endurance baseline",
+    "window": "March - May",
+    "description": "Your first qualification. Build confidence in long steady pacing and fueling."
+  },
+  {
+    "id": "brm-300",
+    "distanceKm": 300,
+    "distanceMiles": 187,
+    "timeLimit": "20h",
+    "focus": "Night riding",
+    "window": "May - June",
+    "description": "Dial in lighting, clothing, and night‑time nutrition while holding pace."
+  },
+  {
+    "id": "brm-400",
+    "distanceKm": 400,
+    "distanceMiles": 249,
+    "timeLimit": "27h",
+    "focus": "Sleep strategy",
+    "window": "June - July",
+    "description": "Test sleep stops and recovery. This is where pacing discipline matters."
+  },
+  {
+    "id": "brm-600",
+    "distanceKm": 600,
+    "distanceMiles": 373,
+    "timeLimit": "40h",
+    "focus": "PBP simulation",
+    "window": "July - August",
+    "description": "A full dress rehearsal for PBP. Manage fatigue, stops, and mental lows."
+  }
+]
