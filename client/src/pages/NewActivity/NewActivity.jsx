@@ -125,7 +125,7 @@ const NewActivity = ({ username }) => {
       })
       .then((res) => {
         if (!res.data.errmsg) {
-          navigate(`/api/activities/${res.data._id}`);
+          navigate(`/activities/${res.data._id}`);
         }
       })
       .catch((error) => {

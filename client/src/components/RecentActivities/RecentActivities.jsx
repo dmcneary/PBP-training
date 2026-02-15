@@ -36,7 +36,7 @@ class RecentUserActivities extends Component {
               <div className="media" key= {act._id}>
                 <img className="mr-3" src="https://staticmapmaker.com/img/google.png" length="250" width="250" alt="placeholder" />
                 <div className="media-body">
-                  <Link to={"/api/activities/" + act._id}>
+                  <Link to={`/activities/${act._id}`}>
                     <h3 className="mt-0">{act.actTitle}</h3>
                   </Link>
                   <p>Created {act.actDate}</p>

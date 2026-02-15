@@ -56,7 +56,7 @@ const App = () => {
           />
           <Route path="/all-activities" element={<AllActivities />} />
           <Route
-            path="/api/activities/:id"
+            path="/activities/:id"
             element={<ActivityDetail loggedIn={loggedIn} username={username} />}
           />
           <Route
