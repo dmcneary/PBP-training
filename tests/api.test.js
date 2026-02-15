@@ -4,6 +4,7 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 
 let app;
 let mongoServer;
+const usingExternalMongo = Boolean(process.env.MONGODB_URI);
 
 const buildUser = () => ({
   username: "testuser",
@@ -26,13 +27,15 @@ const buildActivity = () => ({
 });
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create({
-    instance: {
-      ip: "127.0.0.1",
-      port: 0
-    }
-  });
-  process.env.MONGODB_URI = mongoServer.getUri();
+  if (!usingExternalMongo) {
+    mongoServer = await MongoMemoryServer.create({
+      instance: {
+        ip: "127.0.0.1",
+        port: 0
+      }
+    });
+    process.env.MONGODB_URI = mongoServer.getUri();
+  }
   process.env.SECRET = "test-secret";
   app = require("../app");
 
@@ -41,12 +44,17 @@ beforeAll(async () => {
       mongoose.connection.once("open", resolve);
     });
   }
+  await mongoose.connection.dropDatabase();
 }, 20000);
 
 afterAll(async () => {
-  await mongoose.connection.dropDatabase();
-  await mongoose.connection.close();
-  await mongoServer.stop();
+  if (mongoose.connection.readyState === 1) {
+    await mongoose.connection.dropDatabase();
+    await mongoose.connection.close();
+  }
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 });
 
 describe("auth and sessions", () => {

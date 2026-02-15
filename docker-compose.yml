@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: fit-monkeys-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fit-monkeys-api
+    command: npm run dev:server
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/fit-monkeys
+      NODE_ENV: development
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - mongo
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: fit-monkeys-client
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      VITE_PROXY_TARGET: http://api:3001
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  mongo_data:

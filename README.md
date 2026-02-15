@@ -25,6 +25,14 @@ UCLA Extension final project
 * Leaflet Routing Machine
 * React Router
 
+## Docker (Dev)
+* Start Mongo + API + Client: `docker compose up --build`
+* Stop: `docker compose down`
+
+### Tests (with Docker Mongo)
+1. `docker compose up -d mongo`
+2. `MONGODB_URI=mongodb://localhost:27017/fit-monkeys-test npm test`
+
 # App Flow
 
 ## Landing Page - if not logged in
@@ -50,6 +58,5 @@ UCLA Extension final project
 
 ## Challenge Sign Up
 ![Landing Page](https://i.imgur.com/w8KpIaO.png)
-
 
 
