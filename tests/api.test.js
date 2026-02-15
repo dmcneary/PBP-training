@@ -26,7 +26,12 @@ const buildActivity = () => ({
 });
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryServer.create({
+    instance: {
+      ip: "127.0.0.1",
+      port: 0
+    }
+  });
   process.env.MONGODB_URI = mongoServer.getUri();
   process.env.SECRET = "test-secret";
   app = require("../app");
@@ -36,7 +41,7 @@ beforeAll(async () => {
       mongoose.connection.once("open", resolve);
     });
   }
-});
+}, 20000);
 
 afterAll(async () => {
   await mongoose.connection.dropDatabase();
