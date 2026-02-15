@@ -1,1 +1,1 @@
-export { default } from "./ChallengeSignUp.js";
+export { default } from "./ChallengeSignUp.jsx";
