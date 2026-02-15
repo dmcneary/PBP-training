@@ -4,6 +4,7 @@ import axios from "axios";
 import Landing from "./pages/Landing/";
 import Dashboard from "./pages/Dashboard/";
 import BrmChecklist from "./pages/Challenges/";
+import BrmPlan from "./pages/ChallengeSignUp";
 import Login from "./pages/Login/";
 import Signup from "./pages/Signup/";
 import Header from "./components/Header";
@@ -11,7 +12,6 @@ import Footer from "./components/Footer";
 import AllActivities from "./pages/AllActivities";
 import NewActivity from "./pages/NewActivity";
 import ActivityDetail from "./pages/ActivityDetail";
-import ChallengeSignUp from "./pages/ChallengeSignUp";
 import NoMatch from "./pages/NoMatch";
 import Navbar from "./components/NavbarLoggedIn";
 
@@ -65,6 +65,7 @@ const App = () => {
               element={<NewActivity loggedIn={loggedIn} username={username} />}
             />
             <Route path="/brm-checklist" element={<BrmChecklist />} />
+            <Route path="/brm/:id" element={<BrmPlan />} />
             <Route
               path="/challenges"
               element={<Navigate to="/brm-checklist" replace />}
@@ -74,7 +75,10 @@ const App = () => {
               path="/"
               element={<Landing loggedIn={loggedIn} username={username} />}
             />
-            <Route path="/ChallengeSignUp" element={<ChallengeSignUp />} />
+            <Route
+              path="/ChallengeSignUp"
+              element={<Navigate to="/brm-checklist" replace />}
+            />
             <Route path="*" element={<NoMatch />} />
           </Routes>
         </main>

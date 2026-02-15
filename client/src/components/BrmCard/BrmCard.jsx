@@ -39,7 +39,7 @@ const BrmCard = ({ id, distanceKm, distanceMiles, timeLimit, focus, window, desc
       </div>
       <p className="mt-4 text-sm text-slate-300">{description}</p>
       <div className="mt-5 flex items-center justify-between text-sm">
-        <Link to="/brm-checklist" className="btn-ghost">
+        <Link to={`/brm/${id}`} className="btn-ghost">
           View plan
         </Link>
         <button type="button" className="btn-primary">
