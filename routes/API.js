@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const activityController = require("../controllers/activityController");
+const rusaController = require("../controllers/rusaController");
 
 const requireAuth = (req, res, next) => {
   if (req.user) {
@@ -20,5 +21,9 @@ router
   .get(activityController.findById)
   .put(activityController.update)
   .delete(activityController.remove);
+
+router.get("/rusa/regions", rusaController.listRegions);
+router.get("/rusa/events", rusaController.listEvents);
+router.get("/rusa/results", rusaController.listResults);
 
 module.exports = router;
