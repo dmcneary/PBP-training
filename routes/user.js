@@ -3,6 +3,13 @@ const router = express.Router()
 const User = require('../models/user')
 const passport = require('../passport')
 
+const requireAuth = (req, res, next) => {
+	if (req.user) {
+		return next()
+	}
+	return res.status(401).json({ error: 'Unauthorized' })
+}
+
 router.post('/', (req, res) => {
     console.log('user signup');
 
@@ -71,6 +78,29 @@ router.post('/logout', (req, res) => {
     } else {
         res.send({ msg: 'no user to log out' })
     }
+})
+
+router.put('/clubs', requireAuth, async (req, res) => {
+	const { clubRegionIds } = req.body
+	if (!Array.isArray(clubRegionIds)) {
+		return res.status(400).json({ error: 'clubRegionIds must be an array' })
+	}
+
+	const sanitized = [...new Set(clubRegionIds)]
+		.filter((value) => typeof value === 'string')
+		.map((value) => value.trim())
+		.filter(Boolean)
+
+	try {
+		const updatedUser = await User.findByIdAndUpdate(
+			req.user._id,
+			{ clubRegionIds: sanitized },
+			{ new: true, select: 'username clubRegionIds' }
+		)
+		return res.json({ user: updatedUser })
+	} catch (error) {
+		return res.status(500).json({ error: 'Unable to save club preferences' })
+	}
 })
 
 module.exports = router

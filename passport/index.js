@@ -12,7 +12,7 @@ passport.deserializeUser((id, done) => {
 	const userId = id && id._id ? id._id : id
 	User.findOne(
 		{ _id: userId },
-		'username',
+		'username clubRegionIds',
 		(err, user) => {
 			done(null, user)
 		}

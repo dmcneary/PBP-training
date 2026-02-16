@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
-const STORAGE_KEY = "fit-monkeys:rusa-regions";
-
 const RideCalendar = () => {
   const [regions, setRegions] = useState([]);
   const [selectedRegions, setSelectedRegions] = useState([]);
+  const [user, setUser] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saveState, setSaveState] = useState("idle");
   const [eventsByRegion, setEventsByRegion] = useState({});
   const [resultsByRegion, setResultsByRegion] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -13,17 +15,25 @@ const RideCalendar = () => {
   const [loadingEvents, setLoadingEvents] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setSelectedRegions(parsed);
+    let isMounted = true;
+    axios
+      .get("/user")
+      .then((response) => {
+        if (!isMounted) return;
+        const currentUser = response.data.user;
+        setUser(currentUser);
+        if (currentUser?.clubRegionIds?.length) {
+          setSelectedRegions(currentUser.clubRegionIds);
         }
-      } catch (error) {
-        window.localStorage.removeItem(STORAGE_KEY);
-      }
-    }
+        setUserLoaded(true);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setUserLoaded(true);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -35,14 +45,6 @@ const RideCalendar = () => {
         const nextRegions = response.data.regions || [];
         setRegions(nextRegions);
         setLoadingRegions(false);
-        if (selectedRegions.length === 0) {
-          const pch = nextRegions.find((region) =>
-            region.clubName.toLowerCase().includes("pch randonneurs")
-          );
-          if (pch) {
-            setSelectedRegions([pch.regionId]);
-          }
-        }
       })
       .catch(() => {
         if (!isMounted) return;
@@ -51,11 +53,41 @@ const RideCalendar = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedRegions.length]);
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedRegions));
-  }, [selectedRegions]);
+    if (regions.length === 0 || selectedRegions.length > 0) return;
+    const pch = regions.find((region) =>
+      region.clubName.toLowerCase().includes("pch randonneurs")
+    );
+    if (pch) {
+      setSelectedRegions([pch.regionId]);
+      if (user && !user?.clubRegionIds?.length) {
+        setDirty(true);
+      }
+    }
+  }, [regions, selectedRegions.length, user]);
+
+  useEffect(() => {
+    if (!user || !dirty) return;
+    let isMounted = true;
+    setSaveState("saving");
+    axios
+      .put("/user/clubs", { clubRegionIds: selectedRegions })
+      .then((response) => {
+        if (!isMounted) return;
+        setUser(response.data.user || user);
+        setSaveState("saved");
+        setDirty(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setSaveState("error");
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [dirty, selectedRegions, user]);
 
   useEffect(() => {
     if (selectedRegions.length === 0) return;
@@ -121,6 +153,7 @@ const RideCalendar = () => {
         ? prev.filter((id) => id !== regionId)
         : [...prev, regionId]
     );
+    setDirty(true);
   };
 
   return (
@@ -145,8 +178,25 @@ const RideCalendar = () => {
               Start with PCH Randonneurs and add any other regions you ride with.
             </p>
           </div>
-          <div className="glass rounded-2xl px-4 py-2 text-sm text-slate-300">
-            {selectedRegions.length} selected
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="glass rounded-2xl px-4 py-2 text-sm text-slate-300">
+              {selectedRegions.length} selected
+            </div>
+            {userLoaded ? (
+              user ? (
+                <span className="text-xs text-slate-400">
+                  {saveState === "saving"
+                    ? "Saving to profile…"
+                    : saveState === "error"
+                      ? "Save failed"
+                      : "Saved to profile"}
+                </span>
+              ) : (
+                <span className="text-xs text-slate-400">
+                  Log in to save clubs
+                </span>
+              )
+            ) : null}
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-[1fr_2fr]">

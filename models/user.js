@@ -10,8 +10,9 @@ const userSchema = new Schema({
 	firstName: { type: String, unique: false, required: true },
     lastName: { type: String, unique: false, required: true },
     gender: { type: String, unique: false, required: true },
-    age: { type: Number, unique: false, required: true },
+	age: { type: Number, unique: false, required: true },
 	location: { type: String, unique: false, required: true },
+	clubRegionIds: { type: [String], default: [] },
 	dateCreated: {type: Date, default: Date.now, required: true }
 })
 
