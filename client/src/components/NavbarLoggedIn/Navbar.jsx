@@ -33,6 +33,9 @@ const Navbar = ({ getUser }) => {
           <Link to="/brm-checklist" className="btn-ghost">
             BRM checklist
           </Link>
+          <Link to="/ride-calendar" className="btn-ghost">
+            Calendars
+          </Link>
           <Link to="/newactivity" className="btn-ghost">
             New activity
           </Link>

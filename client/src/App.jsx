@@ -5,6 +5,7 @@ import Landing from "./pages/Landing/";
 import Dashboard from "./pages/Dashboard/";
 import BrmChecklist from "./pages/Challenges/";
 import BrmPlan from "./pages/ChallengeSignUp";
+import RideCalendar from "./pages/RideCalendar";
 import Login from "./pages/Login/";
 import Signup from "./pages/Signup/";
 import Header from "./components/Header";
@@ -66,6 +67,7 @@ const App = () => {
             />
             <Route path="/brm-checklist" element={<BrmChecklist />} />
             <Route path="/brm/:id" element={<BrmPlan />} />
+            <Route path="/ride-calendar" element={<RideCalendar />} />
             <Route
               path="/challenges"
               element={<Navigate to="/brm-checklist" replace />}
