@@ -30,34 +30,26 @@ const getCache = (key) => {
   return entry.data;
 };
 
-const fetchWithFallback = async (path) => {
-  const headers = { "User-Agent": "FitMonkeys/1.0 (PBP training app)" };
-  const primaryUrl = new URL(path, `${PRIMARY_BASE}/`).toString();
-  const primaryResponse = await fetch(primaryUrl, { headers });
-  if (primaryResponse.ok) {
-    return {
-      html: await primaryResponse.text(),
-      baseCgi: `${PRIMARY_BASE}/cgi-bin/`,
-      sourceUrl: primaryUrl
-    };
-  }
-
-  const fallbackUrl = new URL(path, `${FALLBACK_BASE}/`).toString();
-  const fallbackResponse = await fetch(fallbackUrl, { headers });
-  if (!fallbackResponse.ok) {
+const fetchHtml = async (baseUrl, path) => {
+  const headers = {
+    "User-Agent": "FitMonkeys/1.0 (PBP training app)",
+    Accept: "text/html,application/xhtml+xml"
+  };
+  const url = new URL(path, `${baseUrl}/`).toString();
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
     const error = new Error("Unable to fetch RUSA data");
-    error.status = fallbackResponse.status;
+    error.status = response.status;
     throw error;
   }
-
   return {
-    html: await fallbackResponse.text(),
-    baseCgi: `${FALLBACK_BASE}/cgi-bin/`,
-    sourceUrl: fallbackUrl
+    html: await response.text(),
+    baseCgi: `${baseUrl}/cgi-bin/`,
+    sourceUrl: url
   };
 };
 
-const parseRows = (html) => html.split(/<\/tr>/gi).filter((row) => row.includes("<td"));
+const parseRows = (html) => html.split(/<\/tr>/gi).filter((row) => /<td/i.test(row));
 
 const extractCells = (row) => {
   const cells = row.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
@@ -157,10 +149,16 @@ const listRegions = async (req, res) => {
   }
 
   try {
-    const { html, baseCgi, sourceUrl } = await fetchWithFallback(
-      "cgi-bin/regionsearch_PF.pl"
-    );
-    const regions = parseRegions(html, baseCgi);
+    let primary = await fetchHtml(PRIMARY_BASE, "cgi-bin/regionsearch_PF.pl");
+    let regions = parseRegions(primary.html, primary.baseCgi);
+    let sourceUrl = primary.sourceUrl;
+
+    if (regions.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
+      const fallback = await fetchHtml(FALLBACK_BASE, "cgi-bin/regionsearch_PF.pl");
+      regions = parseRegions(fallback.html, fallback.baseCgi);
+      sourceUrl = fallback.sourceUrl;
+    }
+
     const payload = {
       updatedAt: new Date().toISOString(),
       sourceUrl,
@@ -186,10 +184,17 @@ const listEvents = async (req, res) => {
   }
 
   try {
-    const { html, baseCgi, sourceUrl } = await fetchWithFallback(
-      `cgi-bin/eventsearch_PF.pl?region=${encodeURIComponent(region)}&sortby=date`
-    );
-    const events = parseEvents(html, baseCgi);
+    const path = `cgi-bin/eventsearch_PF.pl?region=${encodeURIComponent(region)}&sortby=date`;
+    let primary = await fetchHtml(PRIMARY_BASE, path);
+    let events = parseEvents(primary.html, primary.baseCgi);
+    let sourceUrl = primary.sourceUrl;
+
+    if (events.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
+      const fallback = await fetchHtml(FALLBACK_BASE, path);
+      events = parseEvents(fallback.html, fallback.baseCgi);
+      sourceUrl = fallback.sourceUrl;
+    }
+
     const payload = {
       updatedAt: new Date().toISOString(),
       regionId: region,
@@ -216,10 +221,17 @@ const listResults = async (req, res) => {
   }
 
   try {
-    const { html, baseCgi, sourceUrl } = await fetchWithFallback(
-      `cgi-bin/resultsearch_PF.pl?region=${encodeURIComponent(region)}`
-    );
-    const results = parseResults(html, baseCgi).slice(0, 30);
+    const path = `cgi-bin/resultsearch_PF.pl?region=${encodeURIComponent(region)}`;
+    let primary = await fetchHtml(PRIMARY_BASE, path);
+    let results = parseResults(primary.html, primary.baseCgi).slice(0, 30);
+    let sourceUrl = primary.sourceUrl;
+
+    if (results.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
+      const fallback = await fetchHtml(FALLBACK_BASE, path);
+      results = parseResults(fallback.html, fallback.baseCgi).slice(0, 30);
+      sourceUrl = fallback.sourceUrl;
+    }
+
     const payload = {
       updatedAt: new Date().toISOString(),
       regionId: region,
