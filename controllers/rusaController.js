@@ -1,122 +1,151 @@
-const CACHE_TTL_MS = 60 * 60 * 1000;
-const cache = new Map();
+const { getCache, setCache } = require("../lib/cacheStore");
 
-const PRIMARY_BASE = process.env.RUSA_BASE_URL || "https://rusa.org";
-const FALLBACK_BASE = "https://dev.rusa.org";
+const RUSA_BASE = process.env.RUSA_BASE_URL || "https://rusa.org";
+const BASE_CGI = `${RUSA_BASE}/cgi-bin/`;
+
+const decodeHtmlEntities = (value) => {
+  if (!value) return "";
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+};
 
 const stripTags = (value) =>
-  value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  decodeHtmlEntities(value.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 
-const toAbsoluteUrl = (href, baseCgi) => {
+const toAbsoluteUrl = (href) => {
   if (!href) return null;
   try {
-    return new URL(href, baseCgi).toString();
+    return new URL(href, BASE_CGI).toString();
   } catch (error) {
     return null;
   }
 };
 
-const setCache = (key, data) => {
-  cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, data });
+const extractRows = (html) => {
+  const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi);
+  return rows || [];
 };
 
-const getCache = (key) => {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
+const extractCells = (row) => {
+  const cells = row.match(/<t[dh]\b[^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
+  return cells.map((cell) => stripTags(cell));
+};
+
+const extractLinks = (htmlSnippet) => {
+  const links = Array.from(htmlSnippet.matchAll(/href\s*=\s*["']([^"']+)["']/gi)).map(
+    (match) => toAbsoluteUrl(match[1])
+  );
+  return links.filter(Boolean);
+};
+
+const extractRegionIdFromUrl = (url) => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.searchParams.get("region");
+  } catch (error) {
     return null;
   }
-  return entry.data;
 };
 
-const fetchHtml = async (baseUrl, path) => {
+const splitRegionLabel = (value) => {
+  const match = value.match(/^([A-Z]{2})\s*:\s*(.+)$/);
+  if (!match) {
+    return {
+      regionCode: null,
+      regionName: value.trim()
+    };
+  }
+  return {
+    regionCode: match[1],
+    regionName: match[2].trim()
+  };
+};
+
+const parseDistanceKm = (value) => {
+  const match = value.match(/(\d+(?:\.\d+)?)\s*(?:k|km)\b/i);
+  if (match) return Number(match[1]);
+  const fallback = value.match(/\d+(?:\.\d+)?/);
+  return fallback ? Number(fallback[0]) : null;
+};
+
+const fetchHtml = async (path) => {
   const headers = {
     "User-Agent": "FitMonkeys/1.0 (PBP training app)",
     Accept: "text/html,application/xhtml+xml"
   };
-  const url = new URL(path, `${baseUrl}/`).toString();
+  const url = new URL(path, `${RUSA_BASE}/`).toString();
   const response = await fetch(url, { headers });
+
   if (!response.ok) {
     const error = new Error("Unable to fetch RUSA data");
     error.status = response.status;
     throw error;
   }
+
   return {
     html: await response.text(),
-    baseCgi: `${baseUrl}/cgi-bin/`,
     sourceUrl: url
   };
 };
 
-const parseRows = (html) => html.split(/<\/tr>/gi).filter((row) => /<td/i.test(row));
-
-const extractCells = (row) => {
-  const cells = row.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
-  return cells.map((cell) => stripTags(cell));
-};
-
-const extractLinks = (row, baseCgi) => {
-  const links = Array.from(row.matchAll(/href=["']([^"']+)["']/gi)).map(
-    (match) => toAbsoluteUrl(match[1], baseCgi)
-  );
-  return links.filter(Boolean);
-};
-
-const parseRegions = (html, baseCgi) => {
-  const rows = parseRows(html);
-  const regions = [];
+const parseRegions = (html) => {
+  const rows = extractRows(html);
+  const dedupe = new Map();
 
   rows.forEach((row) => {
     const cells = extractCells(row);
     if (cells.length < 2) return;
 
-    const regionCell = cells[0];
-    const clubCell = cells[1];
-    const regionMatch = regionCell.match(/\((\d+)\)/);
-    if (!regionMatch) return;
+    const links = extractLinks(row);
+    const eventsUrl = links.find((link) => link.includes("eventsearch_PF.pl")) || null;
+    const infoUrl = links.find((link) => !link.includes("eventsearch_PF.pl")) || null;
+    const regionId = extractRegionIdFromUrl(eventsUrl) || extractRegionIdFromUrl(infoUrl);
+    if (!regionId) return;
 
-    const regionId = regionMatch[1];
-    const regionName = regionCell.replace(/\(\d+\)/, "").trim();
-    const links = extractLinks(row, baseCgi);
-    const eventsUrl = links.find((link) => link.includes("eventsearch")) || null;
-    const infoUrl = links.find((link) => !link.includes("eventsearch")) || null;
+    const { regionCode, regionName } = splitRegionLabel(cells[0]);
+    const clubName = cells[1];
 
-    regions.push({
+    dedupe.set(regionId, {
       regionId,
+      regionCode,
       regionName,
-      clubName: clubCell,
+      clubName,
       eventsUrl,
       infoUrl
     });
   });
 
-  return regions;
+  return Array.from(dedupe.values());
 };
 
-const parseEvents = (html, baseCgi) => {
-  const rows = parseRows(html);
+const parseEvents = (html) => {
+  const rows = extractRows(html);
   const events = [];
 
   rows.forEach((row) => {
     const cells = extractCells(row);
     if (cells.length < 4) return;
 
-    const links = extractLinks(row, baseCgi);
-    const [regionCell, typeCell, dateCell, distanceCell, routeCell, websiteCell] = cells;
-    const regionMatch = regionCell.match(/\((\d+)\)/);
-    const regionId = regionMatch ? regionMatch[1] : null;
-    const regionName = regionCell.replace(/\(\d+\)/, "").trim();
-    const distanceKm = Number(distanceCell.replace(/[^0-9.]/g, "")) || null;
+    const links = extractLinks(row);
+    const [regionCell = "", type = "", date = "", distanceCell = "", route = "", website = ""] = cells;
+    const regionMeta = splitRegionLabel(regionCell);
+    const regionId = extractRegionIdFromUrl(links.find((link) => link.includes("region=")) || "");
 
     events.push({
       regionId,
-      regionName,
-      type: typeCell,
-      date: dateCell,
-      distanceKm,
-      route: routeCell || websiteCell,
-      website: websiteCell || null,
+      regionCode: regionMeta.regionCode,
+      regionName: regionMeta.regionName,
+      type,
+      date,
+      distanceKm: parseDistanceKm(distanceCell),
+      route: route || null,
+      website: website || null,
       eventUrl: links[0] || null,
       links
     });
@@ -125,8 +154,8 @@ const parseEvents = (html, baseCgi) => {
   return events;
 };
 
-const parseResults = (html, baseCgi) => {
-  const rows = parseRows(html);
+const parseResults = (html) => {
+  const rows = extractRows(html);
   const results = [];
 
   rows.forEach((row) => {
@@ -135,7 +164,7 @@ const parseResults = (html, baseCgi) => {
 
     results.push({
       cells,
-      links: extractLinks(row, baseCgi)
+      links: extractLinks(row)
     });
   });
 
@@ -143,28 +172,23 @@ const parseResults = (html, baseCgi) => {
 };
 
 const listRegions = async (req, res) => {
-  const cached = getCache("regions");
+  const cacheKey = "rusa:regions";
+  const cached = await getCache(cacheKey);
   if (cached) {
     return res.json(cached);
   }
 
   try {
-    let primary = await fetchHtml(PRIMARY_BASE, "cgi-bin/regionsearch_PF.pl");
-    let regions = parseRegions(primary.html, primary.baseCgi);
-    let sourceUrl = primary.sourceUrl;
-
-    if (regions.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
-      const fallback = await fetchHtml(FALLBACK_BASE, "cgi-bin/regionsearch_PF.pl");
-      regions = parseRegions(fallback.html, fallback.baseCgi);
-      sourceUrl = fallback.sourceUrl;
-    }
+    const { html, sourceUrl } = await fetchHtml("cgi-bin/regionsearch_PF.pl");
+    const regions = parseRegions(html);
 
     const payload = {
       updatedAt: new Date().toISOString(),
       sourceUrl,
       regions
     };
-    setCache("regions", payload);
+
+    await setCache(cacheKey, payload);
     return res.json(payload);
   } catch (error) {
     return res.status(502).json({ error: "Unable to fetch RUSA regions." });
@@ -177,23 +201,16 @@ const listEvents = async (req, res) => {
     return res.status(400).json({ error: "Region is required." });
   }
 
-  const cacheKey = `events:${region}`;
-  const cached = getCache(cacheKey);
+  const cacheKey = `rusa:events:${region}`;
+  const cached = await getCache(cacheKey);
   if (cached) {
     return res.json(cached);
   }
 
   try {
     const path = `cgi-bin/eventsearch_PF.pl?region=${encodeURIComponent(region)}&sortby=date`;
-    let primary = await fetchHtml(PRIMARY_BASE, path);
-    let events = parseEvents(primary.html, primary.baseCgi);
-    let sourceUrl = primary.sourceUrl;
-
-    if (events.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
-      const fallback = await fetchHtml(FALLBACK_BASE, path);
-      events = parseEvents(fallback.html, fallback.baseCgi);
-      sourceUrl = fallback.sourceUrl;
-    }
+    const { html, sourceUrl } = await fetchHtml(path);
+    const events = parseEvents(html);
 
     const payload = {
       updatedAt: new Date().toISOString(),
@@ -201,7 +218,8 @@ const listEvents = async (req, res) => {
       sourceUrl,
       events
     };
-    setCache(cacheKey, payload);
+
+    await setCache(cacheKey, payload);
     return res.json(payload);
   } catch (error) {
     return res.status(502).json({ error: "Unable to fetch RUSA events." });
@@ -214,23 +232,16 @@ const listResults = async (req, res) => {
     return res.status(400).json({ error: "Region is required." });
   }
 
-  const cacheKey = `results:${region}`;
-  const cached = getCache(cacheKey);
+  const cacheKey = `rusa:results:${region}`;
+  const cached = await getCache(cacheKey);
   if (cached) {
     return res.json(cached);
   }
 
   try {
     const path = `cgi-bin/resultsearch_PF.pl?region=${encodeURIComponent(region)}`;
-    let primary = await fetchHtml(PRIMARY_BASE, path);
-    let results = parseResults(primary.html, primary.baseCgi).slice(0, 30);
-    let sourceUrl = primary.sourceUrl;
-
-    if (results.length === 0 && PRIMARY_BASE !== FALLBACK_BASE) {
-      const fallback = await fetchHtml(FALLBACK_BASE, path);
-      results = parseResults(fallback.html, fallback.baseCgi).slice(0, 30);
-      sourceUrl = fallback.sourceUrl;
-    }
+    const { html, sourceUrl } = await fetchHtml(path);
+    const results = parseResults(html).slice(0, 30);
 
     const payload = {
       updatedAt: new Date().toISOString(),
@@ -238,7 +249,8 @@ const listResults = async (req, res) => {
       sourceUrl,
       results
     };
-    setCache(cacheKey, payload);
+
+    await setCache(cacheKey, payload);
     return res.json(payload);
   } catch (error) {
     return res.status(502).json({ error: "Unable to fetch RUSA results." });
