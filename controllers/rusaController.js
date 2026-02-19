@@ -76,7 +76,7 @@ const parseDistanceKm = (value) => {
 
 const fetchHtml = async (path) => {
   const headers = {
-    "User-Agent": "FitMonkeys/1.0 (PBP training app)",
+    "User-Agent": "PBPPlanner/1.0 (PBP training app)",
     Accept: "text/html,application/xhtml+xml"
   };
   const url = new URL(path, `${RUSA_BASE}/`).toString();

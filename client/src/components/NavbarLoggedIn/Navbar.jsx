@@ -24,7 +24,7 @@ const Navbar = ({ getUser }) => {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link to="/dashboard" className="text-lg font-semibold text-white">
-          Fit Monkeys
+          PBP Planner
         </Link>
         <nav className="flex flex-wrap items-center gap-2 text-sm">
           <Link to="/dashboard" className="btn-ghost">

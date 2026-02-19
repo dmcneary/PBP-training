@@ -1,4 +1,4 @@
-# Fit Monkeys
+# PBP Planner
 # Final-Project
 UCLA Extension final project
 
@@ -31,7 +31,7 @@ UCLA Extension final project
 
 ### Tests (with Docker Mongo)
 1. `docker compose up -d mongo`
-2. `MONGODB_URI=mongodb://localhost:27017/fit-monkeys-test npm test`
+2. `MONGODB_URI=mongodb://localhost:27017/pbp-planner-test npm test`
 
 # App Flow
 
