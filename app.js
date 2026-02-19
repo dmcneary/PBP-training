@@ -3,14 +3,14 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const session = require('express-session');
-const dbConnection = require('./models');
-const MongoStore = require('connect-mongo')(session);
+require('./models');
+const MongoStore = require('connect-mongo');
 const passport = require('./passport');
-const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/fit-monkeys';
 const routes = require('./routes');
 
 app.use(morgan('dev'));
@@ -20,7 +20,7 @@ app.use(bodyParser.json());
 app.use(
 	session({
 		secret: process.env.SECRET || 'fraggle-rock', 
-		store: new MongoStore({ mongooseConnection: dbConnection }),
+		store: MongoStore.create({ mongoUrl }),
 		resave: false, //required
 		saveUninitialized: false //required
 	})
