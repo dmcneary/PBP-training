@@ -1,6 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
+const statusBadge = {
+  planned: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
+  completed: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
+  skipped: "border-amber-400/40 bg-amber-400/10 text-amber-200"
+};
+
+const buildEventFingerprint = (event, regionId) => {
+  return [
+    regionId || "",
+    (event.date || "").trim(),
+    (event.route || "").trim().toLowerCase(),
+    event.eventUrl || ""
+  ].join("|");
+};
+
+const parseRideDate = (dateValue) => {
+  const parsed = Date.parse(dateValue || "");
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed);
+};
+
+const formatRideDate = (dateValue) => {
+  const date = parseRideDate(dateValue);
+  if (!date) return dateValue || "Date TBD";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+};
+
 const RideCalendar = () => {
   const [regions, setRegions] = useState([]);
   const [selectedRegions, setSelectedRegions] = useState([]);
@@ -10,6 +41,9 @@ const RideCalendar = () => {
   const [saveState, setSaveState] = useState("idle");
   const [eventsByRegion, setEventsByRegion] = useState({});
   const [resultsByRegion, setResultsByRegion] = useState({});
+  const [plannedRides, setPlannedRides] = useState([]);
+  const [plannedLoaded, setPlannedLoaded] = useState(false);
+  const [actionState, setActionState] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingRegions, setLoadingRegions] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -90,6 +124,31 @@ const RideCalendar = () => {
   }, [dirty, selectedRegions, user]);
 
   useEffect(() => {
+    if (!userLoaded || !user) {
+      setPlannedRides([]);
+      if (userLoaded) setPlannedLoaded(true);
+      return;
+    }
+
+    let isMounted = true;
+    axios
+      .get("/api/planned-rides")
+      .then((response) => {
+        if (!isMounted) return;
+        setPlannedRides(response.data || []);
+        setPlannedLoaded(true);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPlannedLoaded(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, userLoaded]);
+
+  useEffect(() => {
     if (selectedRegions.length === 0) return;
     let isMounted = true;
     setLoadingEvents(true);
@@ -147,6 +206,26 @@ const RideCalendar = () => {
     [regions, selectedRegions]
   );
 
+  const plannedByFingerprint = useMemo(() => {
+    const lookup = {};
+    plannedRides.forEach((ride) => {
+      if (ride.eventFingerprint) {
+        lookup[ride.eventFingerprint] = ride;
+      }
+    });
+    return lookup;
+  }, [plannedRides]);
+
+  const sortedPlannedRides = useMemo(() => {
+    const next = [...plannedRides];
+    next.sort((a, b) => {
+      const aTime = parseRideDate(a.rideDate)?.getTime() || Number.MAX_SAFE_INTEGER;
+      const bTime = parseRideDate(b.rideDate)?.getTime() || Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
+    return next;
+  }, [plannedRides]);
+
   const toggleRegion = (regionId) => {
     setSelectedRegions((prev) =>
       prev.includes(regionId)
@@ -154,6 +233,74 @@ const RideCalendar = () => {
         : [...prev, regionId]
     );
     setDirty(true);
+  };
+
+  const saveRidePlan = (event, region) => {
+    if (!user) return;
+
+    const eventFingerprint = buildEventFingerprint(event, region.regionId);
+    const parsedDate = parseRideDate(event.date);
+    if (!parsedDate) {
+      setActionState((prev) => ({
+        ...prev,
+        [eventFingerprint]: "error"
+      }));
+      return;
+    }
+
+    setActionState((prev) => ({ ...prev, [eventFingerprint]: "saving" }));
+
+    axios
+      .post("/api/planned-rides", {
+        regionId: region.regionId,
+        regionName: region.regionName,
+        clubName: region.clubName,
+        rideName: event.route || `${event.distanceKm || ""}k brevet`.trim(),
+        rideDate: parsedDate.toISOString(),
+        distanceKm: event.distanceKm,
+        eventUrl: event.eventUrl,
+        eventFingerprint
+      })
+      .then((response) => {
+        setPlannedRides((prev) => [response.data, ...prev]);
+        setActionState((prev) => ({ ...prev, [eventFingerprint]: "saved" }));
+      })
+      .catch((error) => {
+        if (error?.response?.status === 409) {
+          setActionState((prev) => ({ ...prev, [eventFingerprint]: "exists" }));
+          return;
+        }
+        setActionState((prev) => ({ ...prev, [eventFingerprint]: "error" }));
+      });
+  };
+
+  const updatePlannedRide = (rideId, updates) => {
+    setActionState((prev) => ({ ...prev, [rideId]: "saving" }));
+    axios
+      .put(`/api/planned-rides/${rideId}`, updates)
+      .then((response) => {
+        const updatedRide = response.data;
+        setPlannedRides((prev) =>
+          prev.map((ride) => (ride._id === rideId ? updatedRide : ride))
+        );
+        setActionState((prev) => ({ ...prev, [rideId]: "saved" }));
+      })
+      .catch(() => {
+        setActionState((prev) => ({ ...prev, [rideId]: "error" }));
+      });
+  };
+
+  const deletePlannedRide = (rideId) => {
+    setActionState((prev) => ({ ...prev, [rideId]: "saving" }));
+    axios
+      .delete(`/api/planned-rides/${rideId}`)
+      .then(() => {
+        setPlannedRides((prev) => prev.filter((ride) => ride._id !== rideId));
+        setActionState((prev) => ({ ...prev, [rideId]: "saved" }));
+      })
+      .catch(() => {
+        setActionState((prev) => ({ ...prev, [rideId]: "error" }));
+      });
   };
 
   return (
@@ -186,7 +333,7 @@ const RideCalendar = () => {
               user ? (
                 <span className="text-xs text-slate-400">
                   {saveState === "saving"
-                    ? "Saving to profile…"
+                    ? "Saving to profile..."
                     : saveState === "error"
                       ? "Save failed"
                       : "Saved to profile"}
@@ -210,7 +357,7 @@ const RideCalendar = () => {
               placeholder="Search PCH, San Diego, Los Angeles..."
             />
             {loadingRegions ? (
-              <p className="mt-4 text-sm text-slate-400">Loading RUSA clubs…</p>
+              <p className="mt-4 text-sm text-slate-400">Loading RUSA clubs...</p>
             ) : (
               <p className="mt-4 text-xs text-slate-400">
                 Data from RUSA region listings.
@@ -244,13 +391,93 @@ const RideCalendar = () => {
       <section className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
+            <h2 className="text-2xl font-semibold text-white">Planned rides</h2>
+            <p className="text-sm text-slate-300">
+              Save events from club calendars and keep your brevet season plan in one place.
+            </p>
+          </div>
+        </div>
+        {!user ? (
+          <div className="glass rounded-3xl border border-white/10 p-6 text-sm text-slate-300">
+            Log in to save planned rides.
+          </div>
+        ) : !plannedLoaded ? (
+          <div className="glass rounded-3xl border border-white/10 p-6 text-sm text-slate-300">
+            Loading planned rides...
+          </div>
+        ) : sortedPlannedRides.length === 0 ? (
+          <div className="glass rounded-3xl border border-white/10 p-6 text-sm text-slate-300">
+            No planned rides yet. Use "Save plan" on an event below.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {sortedPlannedRides.map((ride) => (
+              <div key={ride._id} className="glass rounded-3xl border border-white/10 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                      {ride.clubName || ride.regionName || "Club"}
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-white">{ride.rideName}</h3>
+                    <p className="mt-2 text-sm text-slate-300">
+                      {formatRideDate(ride.rideDate)}
+                      {ride.distanceKm ? ` - ${ride.distanceKm} km` : ""}
+                    </p>
+                  </div>
+                  <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.2em] ${statusBadge[ride.status] || statusBadge.planned}`}>
+                    {ride.status}
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                  {ride.status !== "completed" ? (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => updatePlannedRide(ride._id, { status: "completed" })}
+                    >
+                      Mark completed
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => updatePlannedRide(ride._id, { status: "planned" })}
+                    >
+                      Mark planned
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => deletePlannedRide(ride._id)}
+                  >
+                    Remove
+                  </button>
+                  {ride.eventUrl ? (
+                    <a className="btn-ghost" href={ride.eventUrl} target="_blank" rel="noreferrer">
+                      Event page
+                    </a>
+                  ) : null}
+                  {actionState[ride._id] === "error" ? (
+                    <span className="text-xs text-rose-300">Update failed</span>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
             <h2 className="text-2xl font-semibold text-white">Upcoming brevets</h2>
             <p className="text-sm text-slate-300">
               Pulled from RUSA event calendars for each selected region.
             </p>
           </div>
           {loadingEvents ? (
-            <span className="text-sm text-slate-400">Refreshing…</span>
+            <span className="text-sm text-slate-400">Refreshing...</span>
           ) : null}
         </div>
         {selectedRegionData.map((region) => {
@@ -285,29 +512,53 @@ const RideCalendar = () => {
                     No events returned yet. Try refreshing or open the full calendar.
                   </p>
                 ) : (
-                  events.slice(0, 6).map((event) => (
-                    <div key={`${event.date}-${event.route}`} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                        {event.type || "Brevet"}
-                      </p>
-                      <h4 className="mt-2 text-base font-semibold text-white">
-                        {event.route || "Route to be announced"}
-                      </h4>
-                      <p className="mt-2 text-sm text-slate-300">
-                        {event.date} · {event.distanceKm ? `${event.distanceKm} km` : "Distance TBD"}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                        {event.eventUrl ? (
-                          <a className="btn-ghost" href={event.eventUrl} target="_blank" rel="noreferrer">
-                            Event info
-                          </a>
-                        ) : null}
-                        {event.website ? (
-                          <span>{event.website}</span>
-                        ) : null}
+                  events.slice(0, 6).map((event) => {
+                    const eventFingerprint = buildEventFingerprint(event, region.regionId);
+                    const existingPlan = plannedByFingerprint[eventFingerprint];
+                    return (
+                      <div key={`${event.date}-${event.route}-${region.regionId}`} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                          {event.type || "Brevet"}
+                        </p>
+                        <h4 className="mt-2 text-base font-semibold text-white">
+                          {event.route || "Route to be announced"}
+                        </h4>
+                        <p className="mt-2 text-sm text-slate-300">
+                          {event.date} - {event.distanceKm ? `${event.distanceKm} km` : "Distance TBD"}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                          {event.eventUrl ? (
+                            <a className="btn-ghost" href={event.eventUrl} target="_blank" rel="noreferrer">
+                              Event info
+                            </a>
+                          ) : null}
+                          {event.website ? (
+                            <span>{event.website}</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-3 flex items-center gap-3 text-xs">
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            disabled={!user || Boolean(existingPlan) || actionState[eventFingerprint] === "saving"}
+                            onClick={() => saveRidePlan(event, region)}
+                          >
+                            {existingPlan
+                              ? "Planned"
+                              : actionState[eventFingerprint] === "saving"
+                                ? "Saving..."
+                                : "Save plan"}
+                          </button>
+                          {actionState[eventFingerprint] === "error" ? (
+                            <span className="text-rose-300">Could not save this ride</span>
+                          ) : null}
+                          {actionState[eventFingerprint] === "exists" ? (
+                            <span className="text-amber-300">Already planned</span>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -353,7 +604,7 @@ const RideCalendar = () => {
                 ) : (
                   results.slice(0, 6).map((result, index) => (
                     <div key={`${region.regionId}-result-${index}`} className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
-                      {result.cells.join(" • ")}
+                      {result.cells.join(" - ")}
                     </div>
                   ))
                 )}

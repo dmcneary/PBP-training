@@ -26,6 +26,17 @@ const buildActivity = () => ({
   sportType: "running"
 });
 
+const buildPlannedRide = () => ({
+  regionId: "12",
+  regionName: "Southern California",
+  clubName: "PCH Randonneurs",
+  rideName: "300k coastal brevet",
+  rideDate: "2026-05-02",
+  distanceKm: 300,
+  eventUrl: "https://rusa.org/cgi-bin/eventsearch_PF.pl?region=12",
+  eventFingerprint: "12|2026-05-02|300k coastal brevet|event-12-300k"
+});
+
 beforeAll(async () => {
   if (!usingExternalMongo) {
     mongoServer = await MongoMemoryServer.create({
@@ -139,5 +150,51 @@ describe("activities", () => {
 
     const res = await agent.post("/api/activities").send({ actTitle: "Bad" });
     expect(res.status).toBe(422);
+  });
+});
+
+describe("planned rides", () => {
+  it("requires auth for planned ride endpoints", async () => {
+    const res = await request(app).get("/api/planned-rides");
+    expect(res.status).toBe(401);
+  });
+
+  it("creates, lists, updates, and deletes planned rides", async () => {
+    const user = {
+      ...buildUser(),
+      username: "planner",
+      password: "planner"
+    };
+    await request(app).post("/user").send(user).expect(200);
+
+    const agent = request.agent(app);
+    await agent
+      .post("/user/login")
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    const createRes = await agent
+      .post("/api/planned-rides")
+      .send(buildPlannedRide())
+      .expect(200);
+
+    expect(createRes.body.userId).toBe(user.username);
+    expect(createRes.body.status).toBe("planned");
+
+    const listRes = await agent.get("/api/planned-rides").expect(200);
+    expect(listRes.body.length).toBeGreaterThan(0);
+
+    const rideId = createRes.body._id;
+    const updateRes = await agent
+      .put(`/api/planned-rides/${rideId}`)
+      .send({ status: "completed", notes: "Strong pacing in the final 80k." })
+      .expect(200);
+
+    expect(updateRes.body.status).toBe("completed");
+    expect(updateRes.body.notes).toContain("Strong pacing");
+
+    await agent.delete(`/api/planned-rides/${rideId}`).expect(200);
+    const afterDelete = await agent.get("/api/planned-rides").expect(200);
+    expect(afterDelete.body.find((ride) => ride._id === rideId)).toBeUndefined();
   });
 });
