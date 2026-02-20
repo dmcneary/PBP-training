@@ -5,6 +5,7 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 let app;
 let mongoServer;
 const usingExternalMongo = Boolean(process.env.MONGODB_URI);
+const realFetch = global.fetch;
 
 const buildUser = () => ({
   username: "testuser",
@@ -59,6 +60,7 @@ beforeAll(async () => {
 }, 20000);
 
 afterAll(async () => {
+  global.fetch = realFetch;
   if (mongoose.connection.readyState === 1) {
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
@@ -196,5 +198,95 @@ describe("planned rides", () => {
     await agent.delete(`/api/planned-rides/${rideId}`).expect(200);
     const afterDelete = await agent.get("/api/planned-rides").expect(200);
     expect(afterDelete.body.find((ride) => ride._id === rideId)).toBeUndefined();
+  });
+});
+
+describe("rwgps imports", () => {
+  const mockJsonResponse = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(payload)
+  });
+
+  it("requires auth for rwgps import", async () => {
+    const res = await request(app).post("/api/rwgps/import");
+    expect(res.status).toBe(401);
+  });
+
+  it("imports rides from Ride with GPS and skips duplicates", async () => {
+    const user = {
+      ...buildUser(),
+      username: "rwgps-user",
+      password: "rwgps-user"
+    };
+    await request(app).post("/user").send(user).expect(200);
+
+    const agent = request.agent(app);
+    await agent
+      .post("/user/login")
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mockJsonResponse({ user: { id: 4242 } }))
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          trips: [
+            {
+              id: 9001,
+              name: "Saturday 200k",
+              description: "Steady endurance pace",
+              departed_at: "2026-02-01T08:00:00Z",
+              distance_km: 200,
+              moving_time: 25200
+            },
+            {
+              id: 9002,
+              name: "Recovery spin",
+              departed_at: "2026-02-02T08:00:00Z",
+              distance_meters: 40233,
+              moving_time: 4800
+            }
+          ]
+        })
+      )
+      .mockResolvedValueOnce(mockJsonResponse({ user: { id: 4242 } }))
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          trips: [
+            {
+              id: 9001,
+              name: "Saturday 200k",
+              departed_at: "2026-02-01T08:00:00Z",
+              distance_km: 200,
+              moving_time: 25200
+            }
+          ]
+        })
+      );
+
+    global.fetch = fetchMock;
+
+    const firstImport = await agent
+      .post("/api/rwgps/import")
+      .send({ apiKey: "key", authToken: "token", limit: 10 })
+      .expect(200);
+
+    expect(firstImport.body.importedCount).toBe(2);
+    expect(firstImport.body.skippedCount).toBe(0);
+
+    const secondImport = await agent
+      .post("/api/rwgps/import")
+      .send({ apiKey: "key", authToken: "token", limit: 10 })
+      .expect(200);
+
+    expect(secondImport.body.importedCount).toBe(0);
+    expect(secondImport.body.skippedCount).toBe(1);
+
+    const listRes = await agent.get("/api/activities").expect(200);
+    const importedTitles = listRes.body.map((item) => item.actTitle);
+    expect(importedTitles).toContain("Saturday 200k");
+    expect(importedTitles).toContain("Recovery spin");
   });
 });

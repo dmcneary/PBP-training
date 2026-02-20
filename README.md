@@ -29,6 +29,14 @@ UCLA Extension final project
 * Start Mongo + API + Client: `docker compose up --build`
 * Stop: `docker compose down`
 
+## Ride with GPS Import
+* Endpoint: `POST /api/rwgps/import` (requires logged-in session)
+* Provide credentials either:
+  * In request body: `{ "apiKey": "...", "authToken": "...", "limit": 20 }`
+  * Or via server env vars: `RWGPS_API_KEY` and `RWGPS_AUTH_TOKEN`
+* Import deduplicates on `(userId, source=rwgps, sourceId)` so repeated imports are safe.
+* Dashboard includes a "Ride with GPS import" panel to run imports interactively.
+
 ### Tests (with Docker Mongo)
 1. `docker compose up -d mongo`
 2. `MONGODB_URI=mongodb://localhost:27017/pbp-planner-test npm test`
@@ -58,5 +66,4 @@ UCLA Extension final project
 
 ## Challenge Sign Up
 ![Landing Page](https://i.imgur.com/w8KpIaO.png)
-
 

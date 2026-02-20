@@ -3,6 +3,18 @@ const router = express.Router()
 const User = require('../models/user')
 const passport = require('../passport')
 
+const serializeUser = (user) => {
+	if (!user) return null
+	return {
+		_id: user._id,
+		username: user.username,
+		firstName: user.firstName,
+		lastName: user.lastName,
+		location: user.location,
+		clubRegionIds: Array.isArray(user.clubRegionIds) ? user.clubRegionIds : []
+	}
+}
+
 const requireAuth = (req, res, next) => {
 	if (req.user) {
 		return next()
@@ -65,7 +77,7 @@ router.get('/', (req, res, next) => {
     console.log('===== user!!======')
     console.log(req.user)
     if (req.user) {
-        res.json({ user: req.user })
+        res.json({ user: serializeUser(req.user) })
     } else {
         res.json({ user: null })
     }
@@ -95,9 +107,9 @@ router.put('/clubs', requireAuth, async (req, res) => {
 		const updatedUser = await User.findByIdAndUpdate(
 			req.user._id,
 			{ clubRegionIds: sanitized },
-			{ new: true, select: 'username clubRegionIds' }
+			{ new: true, select: '_id username firstName lastName location clubRegionIds' }
 		)
-		return res.json({ user: updatedUser })
+		return res.json({ user: serializeUser(updatedUser) })
 	} catch (error) {
 		return res.status(500).json({ error: 'Unable to save club preferences' })
 	}
