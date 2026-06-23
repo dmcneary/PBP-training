@@ -46,11 +46,13 @@ const Signup = () => {
         }
       })
       .catch((error) => {
-        console.log("signup error: ");
-        console.log(error);
+        const message =
+          error?.response?.status === 409
+            ? "That username is already in use. Please pick a different username."
+            : "Something went wrong...oops! Please try again later.";
         setFormState((prevState) => ({
           ...prevState,
-          message: "Something went wrong...oops! Please try again later."
+          message
         }));
       });
   };
