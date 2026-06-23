@@ -7,12 +7,28 @@ const sanitizeStatus = (status) => {
   return "planned";
 };
 
-const buildFingerprint = ({ regionId, rideDate, rideName, eventUrl }) => {
+const inferQualificationSlot = (distanceKm) => {
+  const distance = Number(distanceKm);
+  if (!Number.isFinite(distance)) return null;
+  if (distance >= 600) return "brm600";
+  if (distance >= 400) return "brm400";
+  if (distance >= 300) return "brm300";
+  if (distance >= 200) return "brm200";
+  return null;
+};
+
+const toNullableNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const buildFingerprint = ({ regionId, rideDate, rideName, distanceKm }) => {
   const parts = [
     regionId || "",
     rideDate ? new Date(rideDate).toISOString().slice(0, 10) : "",
     (rideName || "").trim().toLowerCase(),
-    eventUrl || ""
+    distanceKm === null || distanceKm === undefined ? "" : String(distanceKm)
   ];
   return parts.join("|");
 };
@@ -31,7 +47,19 @@ module.exports = {
   },
 
   create: async (req, res) => {
-    const { regionId, regionName, clubName, rideName, rideDate, distanceKm, eventUrl, notes } = req.body;
+    const {
+      regionId,
+      regionName,
+      clubName,
+      rideName,
+      rideDate,
+      distanceKm,
+      climbingFeet,
+      eventUrl,
+      routeUrl,
+      sourceEventId,
+      notes,
+    } = req.body;
 
     if (!regionId || !rideName || !rideDate) {
       return res.status(400).json({ error: "regionId, rideName, and rideDate are required" });
@@ -42,9 +70,13 @@ module.exports = {
       return res.status(400).json({ error: "rideDate must be a valid date" });
     }
 
-    const eventFingerprint =
-      req.body.eventFingerprint ||
-      buildFingerprint({ regionId, rideDate: parsedDate, rideName, eventUrl });
+    const parsedDistanceKm = toNullableNumber(distanceKm);
+    const eventFingerprint = buildFingerprint({
+      regionId,
+      rideDate: parsedDate,
+      rideName,
+      distanceKm: parsedDistanceKm
+    });
 
     try {
       const existing = await PlannedRide.findOne({
@@ -63,15 +95,22 @@ module.exports = {
         clubName,
         rideName: rideName.trim(),
         rideDate: parsedDate,
-        distanceKm: typeof distanceKm === "number" ? distanceKm : null,
+        distanceKm: parsedDistanceKm,
+        climbingFeet: toNullableNumber(climbingFeet),
         eventUrl,
+        routeUrl,
+        sourceEventId,
         eventFingerprint,
+        qualificationSlot: inferQualificationSlot(parsedDistanceKm),
         notes: typeof notes === "string" ? notes : "",
         status: "planned"
       });
 
       return res.json(plannedRide);
     } catch (error) {
+      if (error?.code === 11000) {
+        return res.status(409).json({ error: "Ride already planned" });
+      }
       return res.status(500).json({ error: "Unable to save planned ride" });
     }
   },

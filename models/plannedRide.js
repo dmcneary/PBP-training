@@ -9,8 +9,16 @@ const plannedRideSchema = new Schema({
   rideName: { type: String, required: true },
   rideDate: { type: Date, required: true },
   distanceKm: { type: Number },
+  climbingFeet: { type: Number },
   eventUrl: { type: String },
+  routeUrl: { type: String },
+  sourceEventId: { type: String },
   eventFingerprint: { type: String, required: true },
+  qualificationSlot: {
+    type: String,
+    enum: ["brm200", "brm300", "brm400", "brm600", null],
+    default: null
+  },
   notes: { type: String, default: "" },
   status: {
     type: String,
@@ -19,6 +27,8 @@ const plannedRideSchema = new Schema({
   },
   createdAt: { type: Date, default: Date.now, required: true }
 });
+
+plannedRideSchema.index({ userId: 1, eventFingerprint: 1 }, { unique: true });
 
 const PlannedRide = mongoose.model("plannedRide", plannedRideSchema);
 module.exports = PlannedRide;

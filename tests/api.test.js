@@ -245,11 +245,10 @@ describe("planned rides", () => {
   });
 
   it("creates, lists, updates, and deletes planned rides", async () => {
-    const user = {
-      ...buildUser(),
+    const user = buildUser({
       username: "planner",
       password: "planner"
-    };
+    });
     await request(app).post("/user").send(user).expect(200);
 
     const agent = request.agent(app);
@@ -265,6 +264,13 @@ describe("planned rides", () => {
 
     expect(createRes.body.userId).toBe(user.username);
     expect(createRes.body.status).toBe("planned");
+    expect(createRes.body.qualificationSlot).toBe("brm300");
+    expect(createRes.body.eventFingerprint).not.toBe(buildPlannedRide().eventFingerprint);
+
+    await agent
+      .post("/api/planned-rides")
+      .send(buildPlannedRide())
+      .expect(409);
 
     const listRes = await agent.get("/api/planned-rides").expect(200);
     expect(listRes.body.length).toBeGreaterThan(0);
@@ -281,6 +287,68 @@ describe("planned rides", () => {
     await agent.delete(`/api/planned-rides/${rideId}`).expect(200);
     const afterDelete = await agent.get("/api/planned-rides").expect(200);
     expect(afterDelete.body.find((ride) => ride._id === rideId)).toBeUndefined();
+  });
+
+  it("prevents planned ride duplicate bypasses and derives qualification from distance", async () => {
+    const user = buildUser();
+    await request(app).post("/user").send(user).expect(200);
+    const agent = request.agent(app);
+    await agent
+      .post("/user/login")
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    const first = await agent
+      .post("/api/planned-rides")
+      .send({
+        ...buildPlannedRide(),
+        distanceKm: 200,
+        qualificationSlot: "brm600",
+        eventFingerprint: "client-controlled-one"
+      })
+      .expect(200);
+
+    expect(first.body.qualificationSlot).toBe("brm200");
+
+    await agent
+      .post("/api/planned-rides")
+      .send({
+        ...buildPlannedRide(),
+        distanceKm: 200,
+        sourceEventId: "different-source-event",
+        routeUrl: "https://example.com/different-route",
+        eventFingerprint: "client-controlled-two"
+      })
+      .expect(409);
+  });
+
+  it("scopes planned ride updates and deletes to the owner", async () => {
+    const owner = buildUser();
+    const other = buildUser();
+    await request(app).post("/user").send(owner).expect(200);
+    await request(app).post("/user").send(other).expect(200);
+
+    const ownerAgent = request.agent(app);
+    await ownerAgent
+      .post("/user/login")
+      .send({ username: owner.username, password: owner.password })
+      .expect(200);
+    const otherAgent = request.agent(app);
+    await otherAgent
+      .post("/user/login")
+      .send({ username: other.username, password: other.password })
+      .expect(200);
+
+    const createRes = await ownerAgent
+      .post("/api/planned-rides")
+      .send(buildPlannedRide())
+      .expect(200);
+
+    await otherAgent
+      .put(`/api/planned-rides/${createRes.body._id}`)
+      .send({ status: "completed" })
+      .expect(404);
+    await otherAgent.delete(`/api/planned-rides/${createRes.body._id}`).expect(404);
   });
 });
 
