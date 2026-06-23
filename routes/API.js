@@ -11,6 +11,14 @@ const requireAuth = (req, res, next) => {
   return res.status(401).json({ error: "Unauthorized" });
 };
 
+router.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "pbp-planner",
+    timestamp: new Date().toISOString()
+  });
+});
+
 router.route("/all-activities")
   .get(requireAuth, activityController.findAll)
   
