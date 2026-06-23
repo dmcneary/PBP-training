@@ -26,7 +26,9 @@ activitySchema.index(
   { userId: 1, source: 1, sourceId: 1 },
   {
     unique: true,
-    sparse: true
+    partialFilterExpression: {
+      sourceId: { $type: "string" }
+    }
   }
 );
 

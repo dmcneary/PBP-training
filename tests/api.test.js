@@ -151,16 +151,80 @@ describe("activities", () => {
     const listRes = await agent.get("/api/activities").expect(200);
     expect(listRes.body.length).toBeGreaterThan(0);
 
-    const publicRes = await request(app).get("/api/all-activities").expect(200);
-    expect(publicRes.body.length).toBeGreaterThan(0);
+    await request(app).get("/api/all-activities").expect(401);
+    const feedRes = await agent.get("/api/all-activities").expect(200);
+    expect(feedRes.body.length).toBeGreaterThan(0);
+  });
+
+  it("allows multiple manual activities for the same user", async () => {
+    const user = buildUser();
+    await request(app).post("/user").send(user).expect(200);
+
+    const agent = request.agent(app);
+    await agent
+      .post("/user/login")
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    await agent
+      .post("/api/activities")
+      .send({ ...buildActivity(), actTitle: "Manual ride one" })
+      .expect(200);
+    await agent
+      .post("/api/activities")
+      .send({ ...buildActivity(), actTitle: "Manual ride two" })
+      .expect(200);
+
+    const listRes = await agent.get("/api/activities").expect(200);
+    expect(listRes.body.filter((item) => item.userId === user.username)).toHaveLength(2);
+  });
+
+  it("scopes activity detail, update, and delete to the owner", async () => {
+    const owner = buildUser();
+    const other = buildUser();
+    await request(app).post("/user").send(owner).expect(200);
+    await request(app).post("/user").send(other).expect(200);
+
+    const ownerAgent = request.agent(app);
+    await ownerAgent
+      .post("/user/login")
+      .send({ username: owner.username, password: owner.password })
+      .expect(200);
+    const otherAgent = request.agent(app);
+    await otherAgent
+      .post("/user/login")
+      .send({ username: other.username, password: other.password })
+      .expect(200);
+
+    const createRes = await ownerAgent
+      .post("/api/activities")
+      .send(buildActivity())
+      .expect(200);
+    const activityId = createRes.body._id;
+
+    await request(app).get(`/api/activities/${activityId}`).expect(401);
+    await otherAgent.get(`/api/activities/${activityId}`).expect(404);
+    await otherAgent
+      .put(`/api/activities/${activityId}`)
+      .send({ actTitle: "Hijacked" })
+      .expect(404);
+    await otherAgent.delete(`/api/activities/${activityId}`).expect(404);
+
+    const updateRes = await ownerAgent
+      .put(`/api/activities/${activityId}`)
+      .send({ actTitle: "Owner edit", userId: "spoofed-owner" })
+      .expect(200);
+    expect(updateRes.body.actTitle).toBe("Owner edit");
+    expect(updateRes.body.userId).toBe(owner.username);
+
+    await ownerAgent.delete(`/api/activities/${activityId}`).expect(200);
   });
 
   it("rejects activity creation when required fields are missing", async () => {
-    const user = {
-      ...buildUser(),
+    const user = buildUser({
       username: "edgecase",
       password: "edgecase"
-    };
+    });
     await request(app).post("/user").send(user).expect(200);
 
     const agent = request.agent(app);

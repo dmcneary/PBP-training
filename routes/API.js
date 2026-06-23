@@ -12,7 +12,7 @@ const requireAuth = (req, res, next) => {
 };
 
 router.route("/all-activities")
-  .get(activityController.findAll)
+  .get(requireAuth, activityController.findAll)
   
 router.route("/activities")
   .get(requireAuth, activityController.findAllByUser)
@@ -20,9 +20,9 @@ router.route("/activities")
 
 router
   .route("/activities/:id")
-  .get(activityController.findById)
-  .put(activityController.update)
-  .delete(activityController.remove);
+  .get(requireAuth, activityController.findById)
+  .put(requireAuth, activityController.update)
+  .delete(requireAuth, activityController.remove);
 
 router.get("/rusa/regions", rusaController.listRegions);
 router.get("/rusa/events", rusaController.listEvents);

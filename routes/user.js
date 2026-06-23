@@ -23,17 +23,15 @@ const requireAuth = (req, res, next) => {
 }
 
 router.post('/', (req, res) => {
-    console.log('user signup');
-
     const { username, password, firstName, lastName, gender, age, location } = req.body
     if (!username || !password || !firstName || !lastName || !gender || age === undefined || age === null || !location) {
         return res.status(400).json({ error: 'Missing required fields' })
     }
     User.findOne({ username: username }, (err, user) => {
         if (err) {
-            console.log('User.js post error: ', err)
+            return res.status(500).json({ error: 'Unable to create user' })
         } else if (user) {
-            res.json({
+            return res.status(409).json({
                 error: `Sorry, already a user with the username: ${username}`
             })
         }
@@ -48,8 +46,8 @@ router.post('/', (req, res) => {
                 location: location
             })
             User.create(newUser, (err, savedUser) => {
-                if (err) return res.json(err)
-                res.json(savedUser)
+                if (err) return res.status(422).json({ error: 'Unable to create user' })
+                res.json(serializeUser(savedUser))
             })
         }
     })
@@ -57,25 +55,16 @@ router.post('/', (req, res) => {
 
 router.post(
     '/login',
-    function (req, res, next) {
-        console.log('routes/user.js, login, req.body: ');
-        console.log(req.body)
-        next()
-    },
     passport.authenticate('local'),
     (req, res) => {
-        console.log('logged in', req.user);
         var userInfo = {
             username: req.user.username
         };
-        console.log(req.user.username + " is logged in")
         res.send(userInfo);
     }
 )
 
 router.get('/', (req, res, next) => {
-    console.log('===== user!!======')
-    console.log(req.user)
     if (req.user) {
         res.json({ user: serializeUser(req.user) })
     } else {
