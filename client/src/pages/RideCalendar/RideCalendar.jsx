@@ -9,28 +9,61 @@ const statusBadge = {
 
 const buildEventFingerprint = (event, regionId) => {
   return [
-    regionId || "",
-    (event.date || "").trim(),
-    (event.route || "").trim().toLowerCase(),
-    event.eventUrl || ""
+    event.regionId || regionId || "",
+    (event.dateISO || event.date || "").trim(),
+    (event.routeName || event.route || "").trim().toLowerCase(),
+    event.eventId || "",
+    event.routeUrl || "",
+    event.sourceUrl || ""
   ].join("|");
 };
 
 const parseRideDate = (dateValue) => {
-  const parsed = Date.parse(dateValue || "");
+  const rawValue = String(dateValue || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+    return new Date(`${rawValue}T12:00:00.000Z`);
+  }
+  const parsed = Date.parse(rawValue);
   if (Number.isNaN(parsed)) return null;
   return new Date(parsed);
 };
 
 const formatRideDate = (dateValue) => {
-  const date = parseRideDate(dateValue);
-  if (!date) return dateValue || "Date TBD";
+  const rawValue = String(dateValue || "");
+  const dateOnly = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+  }
+  const date = parseRideDate(rawValue);
+  if (!date) return rawValue || "Date TBD";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric"
   });
 };
+
+const eventName = (event) =>
+  event.routeName || event.route || "Route to be announced";
+
+const eventDate = (event) => event.dateISO || event.date || "";
+
+const sortEventsForDisplay = (events) =>
+  [...events].sort((a, b) => {
+    if (a.isPast !== b.isPast) return a.isPast ? 1 : -1;
+    const aTime = Date.parse(eventDate(a));
+    const bTime = Date.parse(eventDate(b));
+    if (Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+    if (Number.isNaN(aTime)) return 1;
+    if (Number.isNaN(bTime)) return -1;
+    return a.isPast ? bTime - aTime : aTime - bTime;
+  });
 
 const RideCalendar = () => {
   const [regions, setRegions] = useState([]);
@@ -47,6 +80,7 @@ const RideCalendar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingRegions, setLoadingRegions] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [regionFetchState, setRegionFetchState] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -90,8 +124,10 @@ const RideCalendar = () => {
   }, []);
 
   useEffect(() => {
-    if (regions.length === 0 || selectedRegions.length > 0) return;
+    if (!userLoaded || regions.length === 0 || selectedRegions.length > 0) return;
     const pch = regions.find((region) =>
+      region.regionId === "58" ||
+      region.clubName.toLowerCase().includes("pacific coast highway randonneurs") ||
       region.clubName.toLowerCase().includes("pch randonneurs")
     );
     if (pch) {
@@ -100,7 +136,7 @@ const RideCalendar = () => {
         setDirty(true);
       }
     }
-  }, [regions, selectedRegions.length, user]);
+  }, [regions, selectedRegions.length, user, userLoaded]);
 
   useEffect(() => {
     if (!user || !dirty) return;
@@ -149,33 +185,60 @@ const RideCalendar = () => {
   }, [user, userLoaded]);
 
   useEffect(() => {
-    if (selectedRegions.length === 0) return;
+    if (selectedRegions.length === 0) {
+      setEventsByRegion({});
+      setResultsByRegion({});
+      setRegionFetchState({});
+      return;
+    }
     let isMounted = true;
     setLoadingEvents(true);
+    setRegionFetchState((prev) =>
+      selectedRegions.reduce((next, regionId) => {
+        next[regionId] = { ...(prev[regionId] || {}), events: "loading", results: prev[regionId]?.results || "idle" };
+        return next;
+      }, {})
+    );
 
     Promise.all(
       selectedRegions.map((regionId) =>
         axios
           .get(`/api/rusa/events?region=${regionId}`)
-          .then((response) => ({ regionId, data: response.data }))
-          .catch(() => ({ regionId, data: { events: [] } }))
+          .then((response) => ({ regionId, data: response.data, ok: true }))
+          .catch(() => ({ regionId, data: { events: [] }, ok: false }))
       )
     ).then((responses) => {
       if (!isMounted) return;
       const nextEvents = {};
+      const nextState = {};
       responses.forEach(({ regionId, data }) => {
         nextEvents[regionId] = data.events || [];
+        nextState[regionId] = { events: responses.find((item) => item.regionId === regionId)?.ok ? "success" : "error" };
       });
       setEventsByRegion(nextEvents);
+      setRegionFetchState((prev) => {
+        const merged = { ...prev };
+        responses.forEach(({ regionId, ok }) => {
+          merged[regionId] = { ...(merged[regionId] || {}), events: ok ? "success" : "error" };
+        });
+        return merged;
+      });
       setLoadingEvents(false);
     });
+
+    setRegionFetchState((prev) =>
+      selectedRegions.reduce((next, regionId) => {
+        next[regionId] = { ...(prev[regionId] || {}), results: "loading" };
+        return next;
+      }, { ...prev })
+    );
 
     Promise.all(
       selectedRegions.map((regionId) =>
         axios
           .get(`/api/rusa/results?region=${regionId}`)
-          .then((response) => ({ regionId, data: response.data }))
-          .catch(() => ({ regionId, data: { results: [] } }))
+          .then((response) => ({ regionId, data: response.data, ok: true }))
+          .catch(() => ({ regionId, data: { results: [] }, ok: false }))
       )
     ).then((responses) => {
       if (!isMounted) return;
@@ -184,6 +247,13 @@ const RideCalendar = () => {
         nextResults[regionId] = data.results || [];
       });
       setResultsByRegion(nextResults);
+      setRegionFetchState((prev) => {
+        const merged = { ...prev };
+        responses.forEach(({ regionId, ok }) => {
+          merged[regionId] = { ...(merged[regionId] || {}), results: ok ? "success" : "error" };
+        });
+        return merged;
+      });
     });
 
     return () => {
@@ -239,7 +309,7 @@ const RideCalendar = () => {
     if (!user) return;
 
     const eventFingerprint = buildEventFingerprint(event, region.regionId);
-    const parsedDate = parseRideDate(event.date);
+    const parsedDate = parseRideDate(eventDate(event));
     if (!parsedDate) {
       setActionState((prev) => ({
         ...prev,
@@ -255,10 +325,13 @@ const RideCalendar = () => {
         regionId: region.regionId,
         regionName: region.regionName,
         clubName: region.clubName,
-        rideName: event.route || `${event.distanceKm || ""}k brevet`.trim(),
+        rideName: eventName(event) || `${event.distanceKm || ""}k brevet`.trim(),
         rideDate: parsedDate.toISOString(),
         distanceKm: event.distanceKm,
-        eventUrl: event.eventUrl,
+        climbingFeet: event.climbingFeet,
+        eventUrl: event.sourceUrl,
+        routeUrl: event.routeUrl,
+        sourceEventId: event.eventId,
         eventFingerprint
       })
       .then((response) => {
@@ -322,7 +395,7 @@ const RideCalendar = () => {
           <div>
             <h2 className="text-lg font-semibold text-white">Select clubs</h2>
             <p className="text-sm text-slate-300">
-              Start with PCH Randonneurs and add any other regions you ride with.
+              Start with Pacific Coast Highway Randonneurs and add any other regions you ride with.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -354,7 +427,7 @@ const RideCalendar = () => {
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search PCH, San Diego, Los Angeles..."
+              placeholder="Search Pacific Coast Highway, San Diego, Los Angeles..."
             />
             {loadingRegions ? (
               <p className="mt-4 text-sm text-slate-400">Loading RUSA clubs...</p>
@@ -455,7 +528,12 @@ const RideCalendar = () => {
                   </button>
                   {ride.eventUrl ? (
                     <a className="btn-ghost" href={ride.eventUrl} target="_blank" rel="noreferrer">
-                      Event page
+                      Calendar page
+                    </a>
+                  ) : null}
+                  {ride.routeUrl ? (
+                    <a className="btn-ghost" href={ride.routeUrl} target="_blank" rel="noreferrer">
+                      Route
                     </a>
                   ) : null}
                   {actionState[ride._id] === "error" ? (
@@ -481,7 +559,8 @@ const RideCalendar = () => {
           ) : null}
         </div>
         {selectedRegionData.map((region) => {
-          const events = eventsByRegion[region.regionId] || [];
+          const events = sortEventsForDisplay(eventsByRegion[region.regionId] || []);
+          const fetchState = regionFetchState[region.regionId]?.events || "idle";
           return (
             <div key={region.regionId} className="glass rounded-3xl border border-white/10 p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -507,44 +586,69 @@ const RideCalendar = () => {
                 </div>
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {events.length === 0 ? (
+                {fetchState === "loading" || fetchState === "idle" ? (
                   <p className="text-sm text-slate-400">
-                    No events returned yet. Try refreshing or open the full calendar.
+                    Loading this club calendar...
+                  </p>
+                ) : fetchState === "error" ? (
+                  <p className="text-sm text-amber-200">
+                    Could not load this club calendar. Open the full calendar to check RUSA directly.
+                  </p>
+                ) : events.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    No events returned yet. The 2027 calendar may not be published for this club; open the full calendar to confirm.
                   </p>
                 ) : (
-                  events.slice(0, 6).map((event) => {
+                  events.map((event) => {
                     const eventFingerprint = buildEventFingerprint(event, region.regionId);
                     const existingPlan = plannedByFingerprint[eventFingerprint];
                     return (
-                      <div key={`${event.date}-${event.route}-${region.regionId}`} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                          {event.type || "Brevet"}
-                        </p>
+                      <div
+                        key={`${event.eventId || eventDate(event)}-${eventName(event)}-${region.regionId}`}
+                        className={`rounded-2xl border border-white/10 bg-slate-950/50 p-4 ${event.isPast ? "opacity-70" : ""}`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                            {event.type || "Brevet"}
+                          </p>
+                          <span className={`rounded-full border px-2 py-1 text-[0.65rem] uppercase tracking-[0.2em] ${
+                            event.isPast
+                              ? "border-slate-500/40 bg-slate-500/10 text-slate-300"
+                              : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                          }`}>
+                            {event.isPast ? "Past" : "Upcoming"}
+                          </span>
+                        </div>
                         <h4 className="mt-2 text-base font-semibold text-white">
-                          {event.route || "Route to be announced"}
+                          {eventName(event)}
                         </h4>
                         <p className="mt-2 text-sm text-slate-300">
-                          {event.date} - {event.distanceKm ? `${event.distanceKm} km` : "Distance TBD"}
+                          {formatRideDate(eventDate(event))} - {event.distanceKm ? `${event.distanceKm} km` : "Distance TBD"}
+                          {event.climbingFeet ? ` - ${event.climbingFeet.toLocaleString()} ft` : ""}
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                          {event.eventUrl ? (
-                            <a className="btn-ghost" href={event.eventUrl} target="_blank" rel="noreferrer">
-                              Event info
+                          {event.routeUrl ? (
+                            <a className="btn-ghost" href={event.routeUrl} target="_blank" rel="noreferrer">
+                              Route
                             </a>
                           ) : null}
-                          {event.website ? (
-                            <span>{event.website}</span>
+                          {event.clubUrl ? (
+                            <a className="btn-ghost" href={event.clubUrl} target="_blank" rel="noreferrer">
+                              Club site
+                            </a>
                           ) : null}
                         </div>
                         <div className="mt-3 flex items-center gap-3 text-xs">
                           <button
                             type="button"
                             className="btn-primary"
-                            disabled={!user || Boolean(existingPlan) || actionState[eventFingerprint] === "saving"}
+                            disabled={!user || event.isPast || Boolean(existingPlan) || actionState[eventFingerprint] === "saving"}
                             onClick={() => saveRidePlan(event, region)}
                           >
                             {existingPlan
                               ? "Planned"
+                              : event.isPast
+                                ? "Past event"
                               : actionState[eventFingerprint] === "saving"
                                 ? "Saving..."
                                 : "Save plan"}
