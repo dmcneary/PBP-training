@@ -4,18 +4,30 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 
 let app;
 let mongoServer;
-const usingExternalMongo = Boolean(process.env.MONGODB_URI);
+const configuredTestMongoUri = process.env.MONGODB_TEST_URI;
 const realFetch = global.fetch;
+let userCounter = 0;
 
-const buildUser = () => ({
-  username: "testuser",
-  password: "p@ssw0rd!",
-  firstName: "Test",
-  lastName: "User",
-  gender: "other",
-  age: 28,
-  location: "Los Angeles"
-});
+const assertSafeTestDatabase = () => {
+  const dbName = mongoose.connection.name || "";
+  if (!/test/i.test(dbName)) {
+    throw new Error(`Refusing to drop non-test database: ${dbName}`);
+  }
+};
+
+const buildUser = (overrides = {}) => {
+  userCounter += 1;
+  return {
+    username: overrides.username || `testuser-${userCounter}`,
+    password: overrides.password || "p@ssw0rd!",
+    firstName: "Test",
+    lastName: "User",
+    gender: "other",
+    age: 28,
+    location: "Los Angeles",
+    ...overrides
+  };
+};
 
 const buildActivity = () => ({
   userId: "spoofed-user",
@@ -39,16 +51,21 @@ const buildPlannedRide = () => ({
 });
 
 beforeAll(async () => {
-  if (!usingExternalMongo) {
+  if (configuredTestMongoUri) {
+    process.env.MONGODB_URI = configuredTestMongoUri;
+  } else {
     mongoServer = await MongoMemoryServer.create({
       instance: {
         ip: "127.0.0.1",
         port: 0
       }
     });
-    process.env.MONGODB_URI = mongoServer.getUri();
+    process.env.MONGODB_URI = mongoServer.getUri("pbp-planner-test");
   }
   process.env.SECRET = "test-secret";
+  delete process.env.RWGPS_API_KEY;
+  delete process.env.RWGPS_AUTH_TOKEN;
+  delete process.env.RWGPS_ALLOW_SERVER_CREDENTIAL_IMPORTS;
   app = require("../app");
 
   if (mongoose.connection.readyState !== 1) {
@@ -56,12 +73,14 @@ beforeAll(async () => {
       mongoose.connection.once("open", resolve);
     });
   }
+  assertSafeTestDatabase();
   await mongoose.connection.dropDatabase();
 }, 20000);
 
 afterAll(async () => {
   global.fetch = realFetch;
   if (mongoose.connection.readyState === 1) {
+    assertSafeTestDatabase();
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
   }
