@@ -364,12 +364,27 @@ describe("rwgps imports", () => {
     expect(res.status).toBe(401);
   });
 
+  it("does not use server RWGPS credentials unless explicitly enabled", async () => {
+    process.env.RWGPS_API_KEY = "server-key";
+    process.env.RWGPS_AUTH_TOKEN = "server-token";
+    process.env.RWGPS_ALLOW_SERVER_CREDENTIAL_IMPORTS = "false";
+
+    const user = buildUser();
+    await request(app).post("/user").send(user).expect(200);
+    const agent = request.agent(app);
+    await agent
+      .post("/user/login")
+      .send({ username: user.username, password: user.password })
+      .expect(200);
+
+    await agent.post("/api/rwgps/import").send({ limit: 1 }).expect(400);
+  });
+
   it("imports rides from Ride with GPS and skips duplicates", async () => {
-    const user = {
-      ...buildUser(),
+    const user = buildUser({
       username: "rwgps-user",
       password: "rwgps-user"
-    };
+    });
     await request(app).post("/user").send(user).expect(200);
 
     const agent = request.agent(app);

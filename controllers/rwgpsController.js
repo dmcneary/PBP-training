@@ -125,13 +125,14 @@ const normalizeTrip = (trip) => {
 };
 
 const importTrips = async (req, res) => {
-  const apiKey = pickCredential(req.body?.apiKey, process.env.RWGPS_API_KEY);
-  const authToken = pickCredential(req.body?.authToken, process.env.RWGPS_AUTH_TOKEN);
+  const allowServerCredentials = process.env.RWGPS_ALLOW_SERVER_CREDENTIAL_IMPORTS === "true";
+  const apiKey = pickCredential(req.body?.apiKey, allowServerCredentials ? process.env.RWGPS_API_KEY : "");
+  const authToken = pickCredential(req.body?.authToken, allowServerCredentials ? process.env.RWGPS_AUTH_TOKEN : "");
   const limit = Math.max(1, Math.min(Number(req.body?.limit) || 20, 100));
 
   if (!apiKey || !authToken) {
     return res.status(400).json({
-      error: "RWGPS credentials are required. Provide apiKey/authToken or set RWGPS_API_KEY and RWGPS_AUTH_TOKEN."
+      error: "RWGPS credentials are required. Provide apiKey and authToken for this import."
     });
   }
 
