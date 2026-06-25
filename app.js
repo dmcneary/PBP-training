@@ -48,7 +48,7 @@ if (isProduction) {
 
 const createSessionStore = () => {
 	if (typeof MongoStore.create === 'function') {
-		return MongoStore.create({ mongoUrl, dbName: mongoDbName });
+		return new MongoStore.create({ mongoUrl, dbName: mongoDbName });
 	}
 
 	const LegacyMongoStore = MongoStore(session);
