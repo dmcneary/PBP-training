@@ -65,8 +65,28 @@ module.exports =  {
      .create(activityData)
      .then(dbModel => res.json(dbModel))
      .catch(err => res.status(422).json(err));
- },
- update: function(req, res) {
+  },
+  update: function(req, res) {
+   const activityData = pickWritableFields(req.body);
+   const query = { _id: req.params.id, userId: req.user.username };
+
+   if (Object.keys(activityData).length === 0) {
+     return activity
+       .findOne(query)
+       .then(dbModel => {
+         if (!dbModel) {
+           return res.status(404).json({ error: "Activity not found" });
+         }
+         return res.json(dbModel);
+       })
+       .catch(err => {
+         if (isCastError(err)) {
+           return res.status(404).json({ error: "Activity not found" });
+         }
+         return res.status(422).json(err);
+       });
+   }
+
    activity
      .findOneAndUpdate(
        { _id: req.params.id, userId: req.user.username },

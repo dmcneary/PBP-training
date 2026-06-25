@@ -1,6 +1,8 @@
 //Connect to Mongo database
 const mongoose = require('mongoose')
 mongoose.Promise = global.Promise
+mongoose.set('strictQuery', false)
+mongoose.set('sanitizeFilter', true)
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/pbp-planner' 
 
@@ -12,8 +14,7 @@ mongoose.connect(uri, {
 }).then(
     () => {console.log('Connected to Mongo');},
     err => {
-         console.log('error connecting to Mongo: ')
-         console.log(err);
+         console.error('Unable to connect to Mongo')
         }
   );
 

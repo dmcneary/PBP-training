@@ -10,6 +10,31 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/fit-monkeys';
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = process.env.SECRET || 'fraggle-rock';
+const defaultMongoDbName = 'fit-monkeys';
+const getMongoDbName = (uri) => {
+	try {
+		const parsed = new URL(uri);
+		const dbName = parsed.pathname.replace(/^\//, '');
+		return dbName || defaultMongoDbName;
+	} catch (error) {
+		return defaultMongoDbName;
+	}
+}
+const mongoDbName = getMongoDbName(mongoUrl);
+
+if (isProduction && !process.env.SECRET) {
+	throw new Error('SECRET environment variable is required in production');
+}
+
+if (isProduction) {
+	app.set('trust proxy', 1);
+}
+
+require('./models');
+const passport = require('./passport');
 const routes = require('./routes');
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SECRET;
@@ -20,6 +45,15 @@ if (isProduction && !sessionSecret) {
 
 if (isProduction) {
 	app.set('trust proxy', 1);
+}
+
+const createSessionStore = () => {
+	if (typeof MongoStore.create === 'function') {
+		return MongoStore.create({ mongoUrl, dbName: mongoDbName });
+	}
+
+	const LegacyMongoStore = MongoStore(session);
+	return new LegacyMongoStore({ url: mongoUrl, dbName: mongoDbName });
 }
 
 app.use(morgan('dev'));

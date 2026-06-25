@@ -72,13 +72,24 @@ router.get('/', (req, res, next) => {
     }
 })
 
-router.post('/logout', (req, res) => {
-    if (req.user) {
-        req.logout()
-        res.send({ msg: 'logging out' })
-    } else {
-        res.send({ msg: 'no user to log out' })
+router.post('/logout', (req, res, next) => {
+    if (!req.user) {
+        return res.send({ msg: 'no user to log out' })
     }
+
+    const done = (err) => {
+        if (err) {
+            return next(err)
+        }
+        return res.send({ msg: 'logging out' })
+    }
+
+    if (req.logout.length === 0) {
+        req.logout()
+        return done()
+    }
+
+    return req.logout(done)
 })
 
 router.put('/clubs', requireAuth, async (req, res) => {
