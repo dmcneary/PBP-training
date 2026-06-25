@@ -3,14 +3,16 @@ const router = express.Router()
 const User = require('../models/user')
 const passport = require('../passport')
 
-const sanitizeUser = (user) => {
-    if (!user) {
-        return null
-    }
-
-    const userObject = typeof user.toObject === 'function' ? user.toObject() : { ...user }
-    delete userObject.password
-    return userObject
+const serializeUser = (user) => {
+	if (!user) return null
+	return {
+		_id: user._id,
+		username: user.username,
+		firstName: user.firstName,
+		lastName: user.lastName,
+		location: user.location,
+		clubRegionIds: Array.isArray(user.clubRegionIds) ? user.clubRegionIds : []
+	}
 }
 
 const requireAuth = (req, res, next) => {
@@ -29,7 +31,7 @@ router.post('/', (req, res) => {
         if (err) {
             return res.status(500).json({ error: 'Unable to create user' })
         } else if (user) {
-            return res.json({
+            return res.status(409).json({
                 error: `Sorry, already a user with the username: ${username}`
             })
         }
@@ -44,10 +46,8 @@ router.post('/', (req, res) => {
                 location: location
             })
             User.create(newUser, (err, savedUser) => {
-                if (err) {
-                    return res.status(500).json({ error: 'Unable to create user' })
-                }
-                return res.json(sanitizeUser(savedUser))
+                if (err) return res.status(422).json({ error: 'Unable to create user' })
+                res.json(serializeUser(savedUser))
             })
         }
     })
@@ -66,7 +66,7 @@ router.post(
 
 router.get('/', (req, res, next) => {
     if (req.user) {
-        res.json({ user: sanitizeUser(req.user) })
+        res.json({ user: serializeUser(req.user) })
     } else {
         res.json({ user: null })
     }
@@ -107,9 +107,9 @@ router.put('/clubs', requireAuth, async (req, res) => {
 		const updatedUser = await User.findByIdAndUpdate(
 			req.user._id,
 			{ clubRegionIds: sanitized },
-			{ new: true, select: 'username clubRegionIds' }
+			{ new: true, select: '_id username firstName lastName location clubRegionIds' }
 		)
-		return res.json({ user: updatedUser })
+		return res.json({ user: serializeUser(updatedUser) })
 	} catch (error) {
 		return res.status(500).json({ error: 'Unable to save club preferences' })
 	}

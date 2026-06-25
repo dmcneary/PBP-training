@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const activityController = require("../controllers/activityController");
 const rusaController = require("../controllers/rusaController");
+const plannedRideController = require("../controllers/plannedRideController");
+const rwgpsController = require("../controllers/rwgpsController");
 
 const requireAuth = (req, res, next) => {
   if (req.user) {
@@ -8,6 +10,14 @@ const requireAuth = (req, res, next) => {
   }
   return res.status(401).json({ error: "Unauthorized" });
 };
+
+router.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "pbp-planner",
+    timestamp: new Date().toISOString()
+  });
+});
 
 router.route("/all-activities")
   .get(requireAuth, activityController.findAll)
@@ -25,5 +35,16 @@ router
 router.get("/rusa/regions", rusaController.listRegions);
 router.get("/rusa/events", rusaController.listEvents);
 router.get("/rusa/results", rusaController.listResults);
+router.post("/rwgps/import", requireAuth, rwgpsController.importTrips);
+
+router
+  .route("/planned-rides")
+  .get(requireAuth, plannedRideController.listByUser)
+  .post(requireAuth, plannedRideController.create);
+
+router
+  .route("/planned-rides/:id")
+  .put(requireAuth, plannedRideController.update)
+  .delete(requireAuth, plannedRideController.remove);
 
 module.exports = router;

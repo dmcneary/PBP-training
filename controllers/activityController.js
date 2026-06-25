@@ -1,6 +1,6 @@
 const activity = require("../models/activities");
 
-const writableFields = [
+const ACTIVITY_FIELDS = [
   "actTitle",
   "actDesc",
   "actDate",
@@ -8,24 +8,31 @@ const writableFields = [
   "durationMins",
   "durationSecs",
   "sportType",
-  "waypoints"
+  "waypoints",
+  "source",
+  "sourceId",
+  "externalUrl",
+  "movingTimeSecs",
+  "avgHeartRate",
+  "avgPower",
+  "elevationGainFeet"
 ];
 
-const pickWritableFields = (body) => (
-  writableFields.reduce((activityData, field) => {
-    if (Object.prototype.hasOwnProperty.call(body, field)) {
-      activityData[field] = body[field];
+const pickActivityFields = (payload) =>
+  ACTIVITY_FIELDS.reduce((next, field) => {
+    if (payload[field] !== undefined) {
+      next[field] = payload[field];
     }
-    return activityData;
-  }, {})
-);
+    return next;
+  }, {});
 
-const isCastError = (err) => err && err.name === "CastError";
+const PUBLIC_ACTIVITY_FIELDS = "userId actTitle actDesc actDate distance durationMins durationSecs sportType";
 
 module.exports =  {
  findAll: function(req, res) {
    activity
      .find({ })
+     .select(PUBLIC_ACTIVITY_FIELDS)
      .sort({ actDate: -1 })
      .then(dbModel => res.json(dbModel))
      .catch(err => res.status(422).json(err));
@@ -39,8 +46,11 @@ module.exports =  {
 },
  findById: function(req, res) {
    activity
-     .findById(req.params.id)
-     .then(dbModel => res.json(dbModel))
+     .findOne({ _id: req.params.id, userId: req.user.username })
+     .then(dbModel => {
+       if (!dbModel) return res.status(404).json({ error: "Activity not found" });
+       return res.json(dbModel);
+     })
      .catch(err => res.status(422).json(err));
  },
  create: function(req, res) {
@@ -48,7 +58,7 @@ module.exports =  {
      return res.status(401).json({ error: 'Unauthorized' });
    }
    const activityData = {
-     ...pickWritableFields(req.body),
+     ...pickActivityFields(req.body),
      userId: req.user.username
    };
    activity
@@ -79,37 +89,23 @@ module.exports =  {
 
    activity
      .findOneAndUpdate(
-       query,
-       { $set: activityData },
+       { _id: req.params.id, userId: req.user.username },
+       pickActivityFields(req.body),
        { new: true, runValidators: true }
      )
      .then(dbModel => {
-       if (!dbModel) {
-         return res.status(404).json({ error: "Activity not found" });
-       }
+       if (!dbModel) return res.status(404).json({ error: "Activity not found" });
        return res.json(dbModel);
      })
-     .catch(err => {
-       if (isCastError(err)) {
-         return res.status(404).json({ error: "Activity not found" });
-       }
-       return res.status(422).json(err);
-     });
+     .catch(err => res.status(422).json(err));
  },
  remove: function(req, res) {
    activity
      .findOneAndDelete({ _id: req.params.id, userId: req.user.username })
      .then(dbModel => {
-       if (!dbModel) {
-         return res.status(404).json({ error: "Activity not found" });
-       }
+       if (!dbModel) return res.status(404).json({ error: "Activity not found" });
        return res.json(dbModel);
      })
-     .catch(err => {
-       if (isCastError(err)) {
-         return res.status(404).json({ error: "Activity not found" });
-       }
-       return res.status(422).json(err);
-     });
+     .catch(err => res.status(422).json(err));
  }
 };

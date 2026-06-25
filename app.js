@@ -3,7 +3,9 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const dbConnection = require('./models');
+const MongoStore = require('connect-mongo')(session);
+const passport = require('./passport');
 const path = require('path');
 
 const app = express();
@@ -34,6 +36,16 @@ if (isProduction) {
 require('./models');
 const passport = require('./passport');
 const routes = require('./routes');
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = process.env.SECRET;
+
+if (isProduction && !sessionSecret) {
+	throw new Error('SECRET must be set in production.');
+}
+
+if (isProduction) {
+	app.set('trust proxy', 1);
+}
 
 const createSessionStore = () => {
 	if (typeof MongoStore.create === 'function') {
@@ -50,16 +62,15 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(
 	session({
-		name: 'fit-monkeys.sid',
-		secret: sessionSecret,
-		store: createSessionStore(),
-		resave: false, //required
-		saveUninitialized: false, //required
+		secret: sessionSecret || 'dev-only-secret-change-me',
+		store: new MongoStore({ mongooseConnection: dbConnection }),
+		resave: false,
+		saveUninitialized: false,
 		cookie: {
 			httpOnly: true,
 			sameSite: 'lax',
 			secure: isProduction,
-			maxAge: 1000 * 60 * 60 * 24 * 7
+			maxAge: 1000 * 60 * 60 * 24 * 14
 		}
 	})
 )

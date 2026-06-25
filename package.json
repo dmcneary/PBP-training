@@ -1,15 +1,20 @@
 {
-  "name": "fit-monkeys",
+  "name": "pbp-planner",
   "version": "1.0.0",
   "main": "app.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node app.js",
     "start:dev": "concurrently \"nodemon --ignore 'client/*'\" \"npm run client\"",
     "client": "cd client && npm run dev",
     "dev:server": "nodemon app.js",
-    "install": "cd client && npm install",
-    "build": "cd client && npm run build",
-    "heroku-postbuild": "cd client && npm install && npm install --only=dev --no-shrinkwrap && npm run build",
+    "install:client": "cd client && npm ci",
+    "cache:warm": "node scripts/warm-rusa-cache.js",
+    "build": "npm run install:client && npm run build:client",
+    "build:client": "cd client && npm run build",
+    "heroku-postbuild": "npm run build",
     "test": "npm run test:server && npm run test:client",
     "test:server": "vitest run",
     "test:client": "cd client && npm run test"
