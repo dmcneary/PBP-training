@@ -3,18 +3,46 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import BrmCard from "../../components/BrmCard";
 import brmData from "../../utils/brm.json";
+import { buildQualificationSummary } from "../../utils/qualification";
+
+const parseCalendarDate = (dateValue) => {
+  const rawValue = String(dateValue || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+    return new Date(`${rawValue}T12:00:00.000Z`).getTime();
+  }
+  return Date.parse(rawValue);
+};
+
+const formatCalendarDate = (dateValue) => {
+  const rawValue = String(dateValue || "");
+  const dateOnly = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+  }
+  const parsed = Date.parse(rawValue);
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+};
 
 const BrmChecklist = () => {
-  const statusById = {
-    "brm-200": "planned",
-    "brm-300": "missing",
-    "brm-400": "missing",
-    "brm-600": "missing"
-  };
-
+  const [user, setUser] = useState(null);
   const [clubRegions, setClubRegions] = useState([]);
   const [clubEvents, setClubEvents] = useState([]);
+  const [plannedRides, setPlannedRides] = useState([]);
+  const [activities, setActivities] = useState([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(true);
+  const [planWarning, setPlanWarning] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -22,7 +50,9 @@ const BrmChecklist = () => {
       .get("/user")
       .then((response) => {
         if (!isMounted) return;
-        const ids = response.data.user?.clubRegionIds || [];
+        const currentUser = response.data.user || null;
+        const ids = currentUser?.clubRegionIds || [];
+        setUser(currentUser);
         setClubRegions(ids);
       })
       .catch(() => {
@@ -34,6 +64,44 @@ const BrmChecklist = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setPlannedRides([]);
+      setActivities([]);
+      setLoadingPlan(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingPlan(true);
+    setPlanWarning("");
+    Promise.allSettled([
+      axios.get("/api/planned-rides"),
+      axios.get("/api/activities")
+    ])
+      .then(([plannedResult, activitiesResult]) => {
+        if (!isMounted) return;
+        if (plannedResult.status === "fulfilled") {
+          setPlannedRides(plannedResult.value.data || []);
+        }
+        if (activitiesResult.status === "fulfilled") {
+          setActivities(activitiesResult.value.data || []);
+        }
+        if (plannedResult.status === "rejected" || activitiesResult.status === "rejected") {
+          setPlanWarning("Some qualification evidence could not load. Showing the data that is available.");
+        }
+        setLoadingPlan(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setLoadingPlan(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (clubRegions.length === 0) return;
@@ -63,8 +131,8 @@ const BrmChecklist = () => {
     const now = Date.now();
 
     return clubEvents.reduce((closest, event) => {
-      const parsed = Date.parse(event.date);
-      if (Number.isNaN(parsed) || parsed < now) {
+      const parsed = parseCalendarDate(event.dateISO);
+      if (event.isPast || Number.isNaN(parsed) || parsed < now) {
         return closest;
       }
       if (!closest || parsed < closest.parsedDate) {
@@ -74,13 +142,15 @@ const BrmChecklist = () => {
     }, null);
   }, [clubEvents]);
 
-  const completedCount = 0;
+  const qualificationSummary = useMemo(
+    () => buildQualificationSummary({ plannedRides, activities }),
+    [plannedRides, activities]
+  );
+  const completedCount = Object.values(qualificationSummary).filter(
+    (slot) => slot.status === "completed"
+  ).length;
   const formattedNextDate = nextClubEvent
-    ? new Date(nextClubEvent.parsedDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      })
+    ? formatCalendarDate(nextClubEvent.dateISO)
     : null;
 
   return (
@@ -97,8 +167,13 @@ const BrmChecklist = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="glass rounded-2xl px-4 py-2 text-sm text-slate-300">
-            {completedCount}/{brmData.length} completed
+            {loadingPlan ? "Loading plan..." : `${completedCount}/${brmData.length} completed`}
           </div>
+          {planWarning ? (
+            <div className="glass rounded-2xl px-4 py-2 text-xs text-amber-200">
+              {planWarning}
+            </div>
+          ) : null}
           <Link
             to="/ride-calendar"
             className="glass rounded-2xl px-4 py-2 text-left text-sm text-slate-300"
@@ -108,7 +183,7 @@ const BrmChecklist = () => {
             </span>
             <span className="mt-1 block text-white">
               {loadingCalendar
-                ? "Loading club brevets…"
+                  ? "Loading club brevets…"
                 : nextClubEvent
                   ? `${formattedNextDate} · ${nextClubEvent.distanceKm || "Distance TBD"} km · ${nextClubEvent.regionName}`
                   : "Add clubs to see your next brevet"}
@@ -122,7 +197,12 @@ const BrmChecklist = () => {
           <BrmCard
             key={brevet.id}
             {...brevet}
-            status={statusById[brevet.id]}
+            status={qualificationSummary[brevet.id]?.status}
+            match={
+              qualificationSummary[brevet.id]?.status === "missing"
+                ? null
+                : qualificationSummary[brevet.id]
+            }
           />
         ))}
       </div>

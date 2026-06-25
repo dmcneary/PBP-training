@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
 
 const AllActivities = () => {
   const [activities, setActivities] = useState([]);
@@ -29,9 +28,9 @@ const AllActivities = () => {
             <div key={act._id} className="glass rounded-3xl p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <Link to={`/activities/${act._id}`} className="text-lg font-semibold text-white">
+                  <span className="text-lg font-semibold text-white">
                     {act.actTitle}
-                  </Link>
+                  </span>
                   <p className="text-xs text-slate-400">
                     {act.actDate ? new Date(act.actDate).toLocaleDateString() : "No date"}
                   </p>

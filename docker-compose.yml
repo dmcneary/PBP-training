@@ -1,7 +1,7 @@
 services:
   mongo:
     image: mongo:7
-    container_name: fit-monkeys-mongo
+    container_name: pbp-planner-mongo
     ports:
       - "27017:27017"
     volumes:
@@ -9,7 +9,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: fit-monkeys-redis
+    container_name: pbp-planner-redis
     ports:
       - "6379:6379"
 
@@ -17,10 +17,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fit-monkeys-api
+    container_name: pbp-planner-api
     command: npm run dev:server
     environment:
-      MONGODB_URI: mongodb://mongo:27017/fit-monkeys
+      MONGODB_URI: mongodb://mongo:27017/pbp-planner
       REDIS_URL: redis://redis:6379
       NODE_ENV: development
       PORT: 3001
@@ -37,7 +37,7 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: fit-monkeys-client
+    container_name: pbp-planner-client
     command: sh -c "npm install --include=dev && npm run dev -- --host 0.0.0.0"
     environment:
       NODE_ENV: development
