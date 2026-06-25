@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const session = require('express-session');
 const dbConnection = require('./models');
 const MongoStore = require('connect-mongo')(session);
-const passport = require('./passport');
 const path = require('path');
 
 const app = express();
