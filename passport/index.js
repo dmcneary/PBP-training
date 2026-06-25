@@ -10,10 +10,13 @@ passport.serializeUser((user, done) => {
 // user object attaches to the request as req.user
 passport.deserializeUser((id, done) => {
 	const userId = id && id._id ? id._id : id
-	User.findOne(
-		{ _id: userId },
+	User.findById(
+		userId,
 		'username clubRegionIds',
 		(err, user) => {
+			if (err) {
+				return done(err)
+			}
 			done(null, user)
 		}
 	)

@@ -15,5 +15,7 @@ const activitySchema = new Schema({
     waypoints: { type: Array }
 });
 
+activitySchema.index({ userId: 1 });
+
 const Activity = mongoose.model('activity', activitySchema);
 module.exports = Activity;
