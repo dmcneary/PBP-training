@@ -9,11 +9,12 @@ const passport = require('./passport');
 const path = require('path');
 
 const app = express();
+const routes = require('./routes');
 const PORT = process.env.PORT || 3001;
 const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/fit-monkeys';
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SECRET || 'fraggle-rock';
-const routes = require('./routes');
+
 require('./models');
 const defaultMongoDbName = 'fit-monkeys';
 const getMongoDbName = (uri) => {
