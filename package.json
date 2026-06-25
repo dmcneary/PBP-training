@@ -41,5 +41,8 @@
     "nodemon": "3.1.14",
     "supertest": "^6.3.4",
     "vitest": "4.1.9"
+  },
+  "allowScripts": {
+    "mongodb-memory-server@9.5.0": true
   }
 }
