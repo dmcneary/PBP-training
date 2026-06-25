@@ -1,15 +1,20 @@
 {
-  "name": "fit-monkeys",
+  "name": "pbp-planner",
   "version": "1.0.0",
   "main": "app.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node app.js",
     "start:dev": "concurrently \"nodemon --ignore 'client/*'\" \"npm run client\"",
     "client": "cd client && npm run dev",
     "dev:server": "nodemon app.js",
-    "install": "cd client && npm install",
-    "build": "cd client && npm run build",
-    "heroku-postbuild": "cd client && npm install && npm install --only=dev --no-shrinkwrap && npm run build",
+    "install:client": "cd client && npm ci",
+    "cache:warm": "node scripts/warm-rusa-cache.js",
+    "build": "npm run install:client && npm run build:client",
+    "build:client": "cd client && npm run build",
+    "heroku-postbuild": "npm run build",
     "test": "npm run test:server && npm run test:client",
     "test:server": "vitest run",
     "test:client": "cd client && npm run test"
@@ -17,6 +22,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.4",
+    "cheerio": "^1.0.0",
     "connect-mongo": "^3.2.0",
     "cookie-parser": "^1.4.4",
     "debug": "~2.6.9",
@@ -32,8 +38,8 @@
   },
   "devDependencies": {
     "concurrently": "^5.2.0",
-    "nodemon": "^2.0.4",
     "mongodb-memory-server": "^9.1.6",
+    "nodemon": "^2.0.4",
     "supertest": "^6.3.4",
     "vitest": "^1.3.1"
   }

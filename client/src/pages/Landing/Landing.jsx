@@ -15,7 +15,7 @@ const Landing = () => {
             Train for Paris-Brest-Paris with confidence.
           </h1>
           <p className="text-lg text-slate-300">
-            Fit Monkeys turns your ride files into a PBP readiness score, pacing
+            PBP Planner turns your ride files into a PBP readiness score, pacing
             guidance, and a clear checklist for each BRM qualifying brevet.
           </p>
           <div className="flex flex-wrap items-center gap-3">
