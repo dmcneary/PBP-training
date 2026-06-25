@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const session = require('express-session');
 const dbConnection = require('./models');
 const MongoStore = require('connect-mongo')(session);
+const passport = require('./passport');
 const path = require('path');
 
 const app = express();
@@ -12,6 +13,8 @@ const PORT = process.env.PORT || 3001;
 const mongoUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/fit-monkeys';
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SECRET || 'fraggle-rock';
+const routes = require('./routes');
+require('./models');
 const defaultMongoDbName = 'fit-monkeys';
 const getMongoDbName = (uri) => {
 	try {
@@ -32,11 +35,7 @@ if (isProduction) {
 	app.set('trust proxy', 1);
 }
 
-require('./models');
-const passport = require('./passport');
-const routes = require('./routes');
-const isProduction = process.env.NODE_ENV === 'production';
-const sessionSecret = process.env.SECRET;
+
 
 if (isProduction && !sessionSecret) {
 	throw new Error('SECRET must be set in production.');
