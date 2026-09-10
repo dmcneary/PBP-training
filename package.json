@@ -40,7 +40,7 @@
     "mongodb-memory-server": "^9.1.6",
     "nodemon": "3.1.14",
     "supertest": "^6.3.4",
-    "vitest": "4.1.9"
+    "vitest": "4.1.11"
   },
   "allowScripts": {
     "mongodb-memory-server@9.5.0": true
